@@ -1,65 +1,86 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
+import { Analytics } from '@vercel/analytics/react'; // Analytics Hook
 import './App.css';
 
-// --- CONFIG ---
-const BACKEND_URL = "https://oddztekbackend.onrender.com"; 
+// --- CONFIGURATION ---
+const BACKEND_URL = "https://oddztekbackend.onrender.com"; // Your Render URL
 
-// --- SOUNDS (Using generic URLs for now) ---
+// --- SOUND ASSETS ---
 const AUDIO = {
   key: new Audio('https://www.soundjay.com/button/sounds/button-16.mp3'),
   error: new Audio('https://www.soundjay.com/button/sounds/button-10.mp3'),
   success: new Audio('https://www.soundjay.com/button/sounds/button-3.mp3'),
   login: new Audio('https://www.soundjay.com/mechanical/sounds/mechanical-clonk-1.mp3'),
-  coin: new Audio('https://www.soundjay.com/button/sounds/button-09.mp3')
+  coin: new Audio('https://www.soundjay.com/button/sounds/button-09.mp3'),
+  boot: new Audio('https://www.soundjay.com/button/sounds/beep-01a.mp3')
 };
 
 function App() {
   const [socket, setSocket] = useState(null);
-  const [gameState, setGameState] = useState({ username: 'guest', balance: 0, level: 1, theme: 'green' });
+  const [gameState, setGameState] = useState({
+    username: 'guest',
+    balance: 0,
+    xp: 0,
+    level: 1,
+    cpuLevel: 1,
+    inventory: [],
+    theme: 'green'
+  });
+
   const [input, setInput] = useState('');
   const [output, setOutput] = useState([
-    { text: 'ODDZTEK OS v5.0 (Deep Net)', type: 'system' },
-    { text: 'Type "register [name] [pass]" to begin.', type: 'info' }
+    { text: 'ODDZTEK KERNEL v6.0 [SINGULARITY]', type: 'system' },
+    { text: 'Mounting virtual file system...', type: 'system' },
+    { text: 'Connection established.', type: 'success' },
+    { text: 'Type "help" for command list.', type: 'info' }
   ]);
   const bottomRef = useRef(null);
 
-  // PLAY SOUND HELPER
-  const playSound = (name) => {
+  // Play Sound Helper
+  const sfx = (name) => {
     if(AUDIO[name]) {
       AUDIO[name].currentTime = 0;
-      AUDIO[name].play().catch(e => console.log("Audio play failed (user interaction needed)"));
+      AUDIO[name].volume = 0.4;
+      AUDIO[name].play().catch(() => {}); // Ignore autoplay errors
     }
-  };
+  }
 
+  // --- INITIALIZATION ---
   useEffect(() => {
-    if (!BACKEND_URL) return;
+    sfx('boot'); // Boot sound
     const newSocket = io(BACKEND_URL);
     setSocket(newSocket);
 
-    newSocket.on('connect', () => printLine('Link Established.', 'success'));
+    // Socket Listeners
+    newSocket.on('connect', () => printLine('Mainframe Uplink: SECURE', 'success'));
     newSocket.on('message', (msg) => printLine(msg.text, msg.type));
-    newSocket.on('player_data', (data) => setGameState(data));
+    newSocket.on('play_sound', (name) => sfx(name));
     
-    // SERVER TRIGGERS SOUND
-    newSocket.on('play_sound', (soundName) => playSound(soundName));
+    newSocket.on('player_data', (data) => {
+      setGameState(prev => ({ ...prev, ...data }));
+      // Apply theme dynamically if changed
+      if (data.theme) document.body.className = `theme-${data.theme}`;
+    });
 
     return () => newSocket.close();
   }, []);
 
+  // Auto-Scroll
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [output]);
 
-  const printLine = (text, type = 'response') => setOutput(prev => [...prev, { text, type }]);
+  const printLine = (text, type = 'response') => {
+    setOutput(prev => [...prev, { text, type }]);
+  };
 
+  // --- COMMAND PARSER ---
   const handleCommand = (cmd) => {
     const cleanCmd = cmd.trim();
     if (!cleanCmd) return;
-    
-    // Typing Sound
-    playSound('key');
+    sfx('key'); // Typing sound
 
-    const userPrompt = gameState.username || 'guest';
-    setOutput(prev => [...prev, { text: `${userPrompt}@oddztek:~$ ${cleanCmd}`, type: 'command' }]);
+    const user = gameState.username || 'guest';
+    setOutput(prev => [...prev, { text: `${user}@oddztek:~$ ${cleanCmd}`, type: 'command' }]);
 
     const args = cleanCmd.split(' ');
     const command = args[0].toLowerCase();
@@ -69,56 +90,97 @@ function App() {
     switch (command) {
       case 'help':
         printLine(`
-[CORE]
-  register [u] [p] - New Account
-  login [u] [p]    - Access System
-  story            - Read Lore Fragments (Level up to unlock more)
+[ACCESS COMMANDS]
+  register [user] [pass] - Create Identity
+  login [user] [pass]    - Initialize Session
+  status                 - View Hardware & Stats
   
 [ECONOMY]
-  mine             - Mine ODZ (20s cooldown)
-  decrypt          - Start Puzzle Minigame
-  solve [word]     - Submit puzzle answer
-  status           - View Profile
-  clear            - Wipe screen
+  mine           - Start Mining Cycle (20s)
+  daily          - Claim 24h Reward (+Bonus for Top 5)
+  shop           - View Hardware/Software Upgrades
+  buy [item_id]  - Purchase Upgrade
+  inventory      - View Installed Modules
+  leaderboard    - View Elite Hackers
+  
+[FILE SYSTEM]
+  files          - List Local Files
+  read [file]    - Decrypt & Read File (Lore)
+  
+[SYSTEM]
+  clear          - Flush Terminal Buffer
+  logout         - Terminate Session
         `, 'info');
         break;
 
-      case 'login': socket.emit('login', { username: args[1], password: args[2] }); break;
+      // Auth
       case 'register': socket.emit('register', { username: args[1], password: args[2] }); break;
+      case 'login': socket.emit('login', { username: args[1], password: args[2] }); break;
+      case 'logout': window.location.reload(); break;
+
+      // Economy
       case 'mine': socket.emit('mine'); break;
-      
-      // NEW COMMANDS
-      case 'story': socket.emit('story'); break;
-      case 'decrypt': socket.emit('decrypt'); break;
-      case 'solve': socket.emit('solve', args[1]); break;
-      
-      case 'status':
-        printLine(`USER: ${gameState.username} | LVL: ${gameState.level} | ODZ: ${gameState.balance}`, 'success');
+      case 'daily': socket.emit('daily'); break;
+      case 'shop': socket.emit('shop'); break;
+      case 'buy': 
+        if (args[1]) socket.emit('buy', args[1]);
+        else printLine('Usage: buy [item_id] (e.g., buy cpu_v2)', 'error');
         break;
+      case 'leaderboard': socket.emit('leaderboard'); break;
+      case 'inv':
+      case 'inventory': 
+        printLine(`MODULES: ${gameState.inventory.length ? gameState.inventory.join(', ') : 'None'}`, 'info');
+        break;
+
+      // System
+      case 'files': socket.emit('files'); break;
+      case 'read': 
+        if (args[1]) socket.emit('read', args[1]);
+        else printLine('Usage: read [filename]', 'error');
+        break;
+
+      case 'status':
+        printLine(`
+USER: ${gameState.username}
+LEVEL: ${gameState.level} (XP: ${gameState.xp})
+BALANCE: ${gameState.balance} ODZ
+HARDWARE:
+  > CPU: v${gameState.cpuLevel}.0
+  > Network: v${gameState.networkLevel || 1}.0
+  > Security: v${gameState.securityLevel || 1}.0
+        `, 'success');
+        break;
+
       case 'clear': setOutput([]); break;
-      default: printLine(`Unknown: ${command}`, 'error'); playSound('error');
+
+      default:
+        printLine(`ERR: Unknown command '${command}'. Type 'help'.`, 'error');
+        sfx('error');
     }
     setInput('');
   };
 
   return (
-    <div className={`terminal-container theme-${gameState.theme || 'green'}`} onClick={() => document.querySelector('input').focus()}>
-      <div className="scanline"></div>
-      <div className="terminal-content">
-        {output.map((line, i) => <div key={i} className={`line ${line.type}`}>{line.text}</div>)}
-        <div className="input-line">
-          <span className="prompt">{gameState.username || 'guest'}@oddztek:~$</span>
-          <input 
-            type="text" 
-            value={input} 
-            onChange={(e) => setInput(e.target.value)} 
-            onKeyDown={(e) => e.key === 'Enter' && handleCommand(input)} 
-            autoFocus 
-          />
+    <>
+      <div className={`terminal-container theme-${gameState.theme || 'green'}`} onClick={() => document.querySelector('input')?.focus()}>
+        <div className="scanline"></div>
+        <div className="terminal-content">
+          {output.map((line, i) => <div key={i} className={`line ${line.type}`}>{line.text}</div>)}
+          <div className="input-line">
+            <span className="prompt">{gameState.username || 'guest'}@oddztek:~$</span>
+            <input 
+              type="text" 
+              value={input} 
+              onChange={(e) => setInput(e.target.value)} 
+              onKeyDown={(e) => e.key === 'Enter' && handleCommand(input)} 
+              autoFocus 
+            />
+          </div>
+          <div ref={bottomRef} />
         </div>
-        <div ref={bottomRef} />
       </div>
-    </div>
+      <Analytics />
+    </>
   );
 }
 
