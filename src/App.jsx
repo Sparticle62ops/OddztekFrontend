@@ -34,7 +34,7 @@ function App() {
 
   const [input, setInput] = useState('');
   const [output, setOutput] = useState([
-    { text: 'ODDZTEK KERNEL v6.2 [BREACH PROTOCOL]', type: 'system' },
+    { text: 'ODDZTEK KERNEL v7.1 [POLISHED]', type: 'system' },
     { text: 'Mounting virtual file system...', type: 'system' },
     { text: 'Connection established.', type: 'success' },
     { text: 'Type "help" for command list.', type: 'info' }
@@ -90,7 +90,7 @@ function App() {
     setOutput(prev => [...prev, { text, type }]);
   };
 
-  // --- COMMAND PARSER (v7.0) ---
+  // --- COMMAND PARSER ---
   const handleCommand = (cmd) => {
     const cleanCmd = cmd.trim();
     if (!cleanCmd) return;
@@ -108,14 +108,18 @@ function App() {
       case 'help':
         printLine(`
 [ACCESS]
-  register [u] [p] / login [u] [p]
-  status / whoami / logout
+  register [u] [p] (code) - Create Account (Optional Invite Code)
+  login [u] [p]           - Login
+  invite                  - Get Referral Code
+  status / whoami
+  logout
   
 [ECONOMY]
   mine           - Start Mining (20s)
   daily          - Claim Reward
-  shop / buy [id]- Black Market
-  inventory      - View Modules
+  shop           - View Upgrades
+  buy [item]     - Purchase Item
+  inv            - Inventory
   leaderboard    - Top Hackers
   
 [HACKING]
@@ -127,16 +131,29 @@ function App() {
   mail check     - Read Inbox
   mail send [u] [msg] - Send Message
   
+[PUZZLES]
+  decrypt        - Start Logic Puzzle
+  solve [ans]    - Submit Answer
+
 [SYSTEM]
-  files / read [f] - File System
+  files / ls     - List Files
+  read [file]    - Read Log
   clear          - Clear Screen
         `, 'info');
         break;
 
       // Auth
-      case 'register': socket.emit('register', { username: args[1], password: args[2] }); break;
-      case 'login': socket.emit('login', { username: args[1], password: args[2] }); break;
+      case 'register': 
+        // args[1]=user, args[2]=pass, args[3]=referralCode
+        if (args[1] && args[2]) socket.emit('register', { username: args[1], password: args[2], referralCode: args[3] }); 
+        else printLine('Usage: register [username] [password] [optional_code]', 'error');
+        break;
+      case 'login': 
+        if (args[1] && args[2]) socket.emit('login', { username: args[1], password: args[2] }); 
+        else printLine('Usage: login [username] [password]', 'error');
+        break;
       case 'logout': window.location.reload(); break;
+      case 'invite': socket.emit('invite'); break;
 
       // Economy
       case 'mine': socket.emit('mine'); break;
@@ -152,25 +169,26 @@ function App() {
         printLine(`MODULES: ${gameState.inventory.length ? gameState.inventory.join(', ') : 'None'}`, 'info');
         break;
 
-      // Hacking
+      // Hacking & Combat
       case 'hack': 
         if (args[1]) socket.emit('hack_init', args[1]);
-        else printLine('Usage: hack [target_user]', 'error');
+        else printLine('Usage: hack [target_username]', 'error');
         break;
+      
       case 'guess': 
         if (args[1]) socket.emit('guess', args[1]);
-        else printLine('Usage: guess [pin]', 'error');
-        break;
-      case 'scan': 
-        if (args[1]) socket.emit('scan_player', args[1]);
-        else printLine('Usage: scan [target]', 'error');
+        else printLine('Usage: guess [number]', 'error');
         break;
 
-      // Communication (New)
+      case 'scan': 
+        if (args[1]) socket.emit('scan_player', args[1]);
+        else printLine('Usage: scan [target_username]', 'error');
+        break;
+
+      // Communication
       case 'mail':
         if (args[1] === 'check') socket.emit('mail_check');
         else if (args[1] === 'send') {
-          // Rejoin the rest of the arguments for the message body
           const recipient = args[2];
           const message = args.slice(3).join(' ');
           if (recipient && message) socket.emit('mail_send', { recipient, message });
@@ -180,9 +198,21 @@ function App() {
         }
         break;
 
+      // Puzzles
+      case 'decrypt': socket.emit('decrypt'); break;
+      case 'solve': 
+        if(args[1]) socket.emit('solve', args[1]);
+        else printLine('Usage: solve [answer]', 'error');
+        break;
+
       // System
-      case 'files': socket.emit('files'); break;
+      case 'files': 
+      case 'ls':
+        socket.emit('files'); 
+        break;
+      
       case 'read': 
+      case 'cat':
         if (args[1]) socket.emit('read', args[1]);
         else printLine('Usage: read [filename]', 'error');
         break;
