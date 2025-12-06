@@ -4,7 +4,7 @@ import './App.css';
 
 // --- CONNECTION SETUP ---
 // REPLACE WITH YOUR ACTUAL RENDER BACKEND URL
-const BACKEND_URL = "YOUR_RENDER_URL_HERE"; 
+const BACKEND_URL = "https://oddztekbackend.onrender.com"; 
 
 function App() {
   const [socket, setSocket] = useState(null);
