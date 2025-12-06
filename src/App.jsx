@@ -102,10 +102,14 @@ function App() {
   buy [item_id]  - Purchase Upgrade
   inventory      - View Installed Modules
   leaderboard    - View Elite Hackers
-  
+
+[HACKING]
+  hack [user]    - Start Breach (30s time limit)
+  guess [pin]    - Guess PIN (Higher/Lower hints)
+
 [FILE SYSTEM]
   files          - List Local Files
-  read [file]    - Decrypt & Read File (Lore)
+  read [file]    - Decrypt & Read File
   
 [SYSTEM]
   clear          - Flush Terminal Buffer
@@ -131,7 +135,31 @@ function App() {
       case 'inventory': 
         printLine(`MODULES: ${gameState.inventory.length ? gameState.inventory.join(', ') : 'None'}`, 'info');
         break;
+  // HACKING
+      case 'hack':
+        if (gameState.username === 'guest') printLine('Login required.', 'error');
+        else if (args[1]) socket.emit('hack_init', args[1]);
+        else printLine('Usage: hack [target_username]', 'error');
+        break;
 
+      case 'guess':
+        if (gameState.username === 'guest') printLine('Login required.', 'error');
+        else if (args[1]) socket.emit('guess', args[1]);
+        else printLine('Usage: guess [number]', 'error');
+        break;
+
+      // FILES
+      case 'files':
+      case 'ls': // Alias
+        socket.emit('files');
+        break;
+
+      case 'read':
+      case 'cat': // Alias
+        if (args[1]) socket.emit('read', args[1]);
+        else printLine('Usage: read [filename]', 'error');
+        break;
+        
       // System
       case 'files': socket.emit('files'); break;
       case 'read': 
