@@ -90,7 +90,7 @@ function App() {
     setOutput(prev => [...prev, { text, type }]);
   };
 
-  // --- COMMAND PARSER ---
+  // --- COMMAND PARSER (v7.0) ---
   const handleCommand = (cmd) => {
     const cleanCmd = cmd.trim();
     if (!cleanCmd) return;
@@ -108,40 +108,34 @@ function App() {
       case 'help':
         printLine(`
 [ACCESS]
-  register [user] [pass]
-  login [user] [pass]
-  status / whoami
-  logout
+  register [u] [p] / login [u] [p]
+  status / whoami / logout
   
 [ECONOMY]
   mine           - Start Mining (20s)
   daily          - Claim Reward
-  shop           - View Upgrades
-  buy [item]     - Purchase Item
-  inv            - Inventory
+  shop / buy [id]- Black Market
+  inventory      - View Modules
   leaderboard    - Top Hackers
   
 [HACKING]
-  hack [user]    - Start Breach (30s)
-  guess [pin]    - Input PIN
-  scan [user]    - Check target security
+  scan [user]    - Recon Target
+  hack [user]    - Start Breach
+  guess [pin]    - Input PIN (Digit Reveal Active)
+  
+[COMMUNICATION]
+  mail check     - Read Inbox
+  mail send [u] [msg] - Send Message
   
 [SYSTEM]
-  files / ls     - List Files
-  read [file]    - Read Log
+  files / read [f] - File System
   clear          - Clear Screen
         `, 'info');
         break;
 
       // Auth
-      case 'register': 
-        if (args[1] && args[2]) socket.emit('register', { username: args[1], password: args[2] }); 
-        else printLine('Usage: register [username] [password]', 'error');
-        break;
-      case 'login': 
-        if (args[1] && args[2]) socket.emit('login', { username: args[1], password: args[2] }); 
-        else printLine('Usage: login [username] [password]', 'error');
-        break;
+      case 'register': socket.emit('register', { username: args[1], password: args[2] }); break;
+      case 'login': socket.emit('login', { username: args[1], password: args[2] }); break;
       case 'logout': window.location.reload(); break;
 
       // Economy
@@ -158,30 +152,37 @@ function App() {
         printLine(`MODULES: ${gameState.inventory.length ? gameState.inventory.join(', ') : 'None'}`, 'info');
         break;
 
-      // Hacking & Combat
+      // Hacking
       case 'hack': 
         if (args[1]) socket.emit('hack_init', args[1]);
-        else printLine('Usage: hack [target_username]', 'error');
+        else printLine('Usage: hack [target_user]', 'error');
         break;
-      
       case 'guess': 
         if (args[1]) socket.emit('guess', args[1]);
-        else printLine('Usage: guess [number]', 'error');
+        else printLine('Usage: guess [pin]', 'error');
         break;
-
       case 'scan': 
         if (args[1]) socket.emit('scan_player', args[1]);
-        else printLine('Usage: scan [target_username]', 'error');
+        else printLine('Usage: scan [target]', 'error');
+        break;
+
+      // Communication (New)
+      case 'mail':
+        if (args[1] === 'check') socket.emit('mail_check');
+        else if (args[1] === 'send') {
+          // Rejoin the rest of the arguments for the message body
+          const recipient = args[2];
+          const message = args.slice(3).join(' ');
+          if (recipient && message) socket.emit('mail_send', { recipient, message });
+          else printLine('Usage: mail send [user] [message]', 'error');
+        } else {
+          printLine('Usage: mail check OR mail send [user] [msg]', 'error');
+        }
         break;
 
       // System
-      case 'files': 
-      case 'ls':
-        socket.emit('files'); 
-        break;
-      
+      case 'files': socket.emit('files'); break;
       case 'read': 
-      case 'cat':
         if (args[1]) socket.emit('read', args[1]);
         else printLine('Usage: read [filename]', 'error');
         break;
