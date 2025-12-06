@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
-import { Analytics } from '@vercel/analytics/react'; // Analytics Hook
+import { Analytics } from '@vercel/analytics/react';
 import './App.css';
 
 // --- CONFIGURATION ---
-const BACKEND_URL = "https://oddztekbackend.onrender.com"; // Your Render URL
+// REPLACE WITH YOUR ACTUAL RENDER BACKEND URL
+const BACKEND_URL = "https://oddztekbackend.onrender.com"; 
 
 // --- SOUND ASSETS ---
 const AUDIO = {
@@ -13,7 +14,8 @@ const AUDIO = {
   success: new Audio('https://www.soundjay.com/button/sounds/button-3.mp3'),
   login: new Audio('https://www.soundjay.com/mechanical/sounds/mechanical-clonk-1.mp3'),
   coin: new Audio('https://www.soundjay.com/button/sounds/button-09.mp3'),
-  boot: new Audio('https://www.soundjay.com/button/sounds/beep-01a.mp3')
+  boot: new Audio('https://www.soundjay.com/button/sounds/beep-01a.mp3'),
+  hack: new Audio('https://www.soundjay.com/communication/sounds/data-transfer-96kbps.mp3') 
 };
 
 function App() {
@@ -24,49 +26,64 @@ function App() {
     xp: 0,
     level: 1,
     cpuLevel: 1,
+    networkLevel: 1,
+    securityLevel: 1,
     inventory: [],
     theme: 'green'
   });
 
   const [input, setInput] = useState('');
   const [output, setOutput] = useState([
-    { text: 'ODDZTEK KERNEL v6.0 [SINGULARITY]', type: 'system' },
+    { text: 'ODDZTEK KERNEL v6.2 [BREACH PROTOCOL]', type: 'system' },
     { text: 'Mounting virtual file system...', type: 'system' },
     { text: 'Connection established.', type: 'success' },
     { text: 'Type "help" for command list.', type: 'info' }
   ]);
   const bottomRef = useRef(null);
 
-  // Play Sound Helper
+  // Sound Helper
   const sfx = (name) => {
     if(AUDIO[name]) {
       AUDIO[name].currentTime = 0;
-      AUDIO[name].volume = 0.4;
-      AUDIO[name].play().catch(() => {}); // Ignore autoplay errors
+      AUDIO[name].volume = 0.3;
+      AUDIO[name].play().catch(() => {});
     }
   }
 
   // --- INITIALIZATION ---
   useEffect(() => {
-    sfx('boot'); // Boot sound
+    sfx('boot');
+    
+    // Safety check for URL
+    if (!BACKEND_URL || BACKEND_URL.includes("YOUR_RENDER_URL")) {
+        setOutput(prev => [...prev, { text: "ERROR: Backend URL not configured.", type: "error" }]);
+        return;
+    }
+
     const newSocket = io(BACKEND_URL);
     setSocket(newSocket);
 
-    // Socket Listeners
-    newSocket.on('connect', () => printLine('Mainframe Uplink: SECURE', 'success'));
-    newSocket.on('message', (msg) => printLine(msg.text, msg.type));
+    newSocket.on('connect', () => {
+        setOutput(prev => [...prev, { text: 'Mainframe Uplink: SECURE', type: 'success' }]);
+    });
+    
+    newSocket.on('message', (msg) => {
+      setOutput(prev => [...prev, { text: msg.text, type: msg.type }]);
+      if (msg.type === 'error') sfx('error');
+      if (msg.type === 'special') sfx('hack');
+    });
+    
     newSocket.on('play_sound', (name) => sfx(name));
     
     newSocket.on('player_data', (data) => {
       setGameState(prev => ({ ...prev, ...data }));
-      // Apply theme dynamically if changed
       if (data.theme) document.body.className = `theme-${data.theme}`;
     });
 
     return () => newSocket.close();
   }, []);
 
-  // Auto-Scroll
+  // Auto-scroll
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [output]);
 
   const printLine = (text, type = 'response') => {
@@ -77,7 +94,7 @@ function App() {
   const handleCommand = (cmd) => {
     const cleanCmd = cmd.trim();
     if (!cleanCmd) return;
-    sfx('key'); // Typing sound
+    sfx('key');
 
     const user = gameState.username || 'guest';
     setOutput(prev => [...prev, { text: `${user}@oddztek:~$ ${cleanCmd}`, type: 'command' }]);
@@ -90,36 +107,41 @@ function App() {
     switch (command) {
       case 'help':
         printLine(`
-[ACCESS COMMANDS]
-  register [user] [pass] - Create Identity
-  login [user] [pass]    - Initialize Session
-  status                 - View Hardware & Stats
+[ACCESS]
+  register [user] [pass]
+  login [user] [pass]
+  status / whoami
+  logout
   
 [ECONOMY]
-  mine           - Start Mining Cycle (20s)
-  daily          - Claim 24h Reward (+Bonus for Top 5)
-  shop           - View Hardware/Software Upgrades
-  buy [item_id]  - Purchase Upgrade
-  inventory      - View Installed Modules
-  leaderboard    - View Elite Hackers
-
+  mine           - Start Mining (20s)
+  daily          - Claim Reward
+  shop           - View Upgrades
+  buy [item]     - Purchase Item
+  inv            - Inventory
+  leaderboard    - Top Hackers
+  
 [HACKING]
-  hack [user]    - Start Breach (30s time limit)
-  guess [pin]    - Guess PIN (Higher/Lower hints)
-
-[FILE SYSTEM]
-  files          - List Local Files
-  read [file]    - Decrypt & Read File
+  hack [user]    - Start Breach (30s)
+  guess [pin]    - Input PIN
+  scan [user]    - Check target security
   
 [SYSTEM]
-  clear          - Flush Terminal Buffer
-  logout         - Terminate Session
+  files / ls     - List Files
+  read [file]    - Read Log
+  clear          - Clear Screen
         `, 'info');
         break;
 
       // Auth
-      case 'register': socket.emit('register', { username: args[1], password: args[2] }); break;
-      case 'login': socket.emit('login', { username: args[1], password: args[2] }); break;
+      case 'register': 
+        if (args[1] && args[2]) socket.emit('register', { username: args[1], password: args[2] }); 
+        else printLine('Usage: register [username] [password]', 'error');
+        break;
+      case 'login': 
+        if (args[1] && args[2]) socket.emit('login', { username: args[1], password: args[2] }); 
+        else printLine('Usage: login [username] [password]', 'error');
+        break;
       case 'logout': window.location.reload(); break;
 
       // Economy
@@ -128,46 +150,44 @@ function App() {
       case 'shop': socket.emit('shop'); break;
       case 'buy': 
         if (args[1]) socket.emit('buy', args[1]);
-        else printLine('Usage: buy [item_id] (e.g., buy cpu_v2)', 'error');
+        else printLine('Usage: buy [item_id]', 'error');
         break;
       case 'leaderboard': socket.emit('leaderboard'); break;
       case 'inv':
       case 'inventory': 
         printLine(`MODULES: ${gameState.inventory.length ? gameState.inventory.join(', ') : 'None'}`, 'info');
         break;
-  // HACKING
-      case 'hack':
-        if (gameState.username === 'guest') printLine('Login required.', 'error');
-        else if (args[1]) socket.emit('hack_init', args[1]);
+
+      // Hacking & Combat
+      case 'hack': 
+        if (args[1]) socket.emit('hack_init', args[1]);
         else printLine('Usage: hack [target_username]', 'error');
         break;
-
-      case 'guess':
-        if (gameState.username === 'guest') printLine('Login required.', 'error');
-        else if (args[1]) socket.emit('guess', args[1]);
+      
+      case 'guess': 
+        if (args[1]) socket.emit('guess', args[1]);
         else printLine('Usage: guess [number]', 'error');
         break;
 
-      // FILES
-      case 'files':
-      case 'ls': // Alias
-        socket.emit('files');
+      case 'scan': 
+        if (args[1]) socket.emit('scan_player', args[1]);
+        else printLine('Usage: scan [target_username]', 'error');
         break;
 
-      case 'read':
-      case 'cat': // Alias
-        if (args[1]) socket.emit('read', args[1]);
-        else printLine('Usage: read [filename]', 'error');
-        break;
-        
       // System
-      case 'files': socket.emit('files'); break;
+      case 'files': 
+      case 'ls':
+        socket.emit('files'); 
+        break;
+      
       case 'read': 
+      case 'cat':
         if (args[1]) socket.emit('read', args[1]);
         else printLine('Usage: read [filename]', 'error');
         break;
 
       case 'status':
+      case 'whoami':
         printLine(`
 USER: ${gameState.username}
 LEVEL: ${gameState.level} (XP: ${gameState.xp})
