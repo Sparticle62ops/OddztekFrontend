@@ -7,7 +7,6 @@ body {
   overflow: hidden;
 }
 
-/* --- CONTAINER --- */
 .terminal-container {
   height: 100vh;
   width: 100vw;
@@ -17,56 +16,51 @@ body {
   position: relative;
 }
 
-/* --- THEMES --- */
-.theme-green {
-  background-color: #050a05;
-  color: #00ff00;
-  text-shadow: 0 0 4px #00ff00;
-}
+/* --- THEMES (FIXED) --- */
+
+/* Default Green */
+.theme-green { background: #050a05; color: #00ff00; text-shadow: 0 0 3px #00cc00; }
 .theme-green input { color: #00ff00; caret-color: #00ff00; }
 
-.theme-amber {
-  background-color: #1a1000;
-  color: #ffb000;
-  text-shadow: 0 0 4px #ffb000;
-}
+/* Amber (Good) */
+.theme-amber { background: #1a1000; color: #ffb000; text-shadow: 0 0 3px #cc8800; }
 .theme-amber input { color: #ffb000; caret-color: #ffb000; }
 
-.theme-plasma {
-  background-color: #0a001a;
-  color: #d000ff;
-  text-shadow: 0 0 4px #00ffff;
+/* Plasma (Brighter Text) */
+.theme-plasma { background: #0a001a; color: #e066ff; text-shadow: 0 0 4px #b300ff; }
+.theme-plasma input { color: #00ffff; caret-color: #00ffff; }
+.theme-plasma .prompt { color: #00ffff; }
+
+/* Matrix (High Contrast) */
+.theme-matrix { 
+  background: #000; 
+  color: #0f0; 
+  font-family: 'VT323', monospace; /* Falls back if not installed */
+  text-shadow: 0 0 2px #0f0;
 }
-.theme-plasma input { color: #00ffff; caret-color: #d000ff; }
+.theme-matrix input { color: #fff; caret-color: #0f0; font-weight: bold; }
+.theme-matrix .line.special { color: #fff; background: #003300; }
 
 /* --- TEXT TYPES --- */
 .line { margin-bottom: 4px; white-space: pre-wrap; word-wrap: break-word; }
-.line.command { opacity: 0.6; }
-.line.system { color: #00aa00; font-style: italic; }
-.line.error { color: #ff3333; text-shadow: 0 0 4px #ff0000; }
-.line.success { color: #55ffff; text-shadow: 0 0 4px #00ffff; }
-.line.special { color: #ffff00; text-shadow: 0 0 8px #ffff00; font-weight: bold; }
-.line.info { color: #cccccc; }
+.line.command { opacity: 0.7; font-weight: bold; }
+.line.system { color: inherit; opacity: 0.8; font-style: italic; }
+.line.error { color: #ff4444; text-shadow: none; font-weight: bold; }
+.line.success { color: #00ffff; font-weight: bold; }
+.line.special { color: #ffff00; font-weight: bold; animation: pulse 2s infinite; }
+.line.info { opacity: 0.9; }
 
 /* --- INPUT --- */
 .input-line { display: flex; margin-top: 10px; }
 .prompt { margin-right: 10px; font-weight: bold; }
-input {
-  background: transparent;
-  border: none;
-  outline: none;
-  font-family: inherit;
-  font-size: 16px;
-  flex-grow: 1;
-  text-shadow: inherit;
-}
+input { background: transparent; border: none; outline: none; font-family: inherit; font-size: 16px; flex-grow: 1; }
 
-/* --- SCANLINE EFFECT --- */
+/* --- ANIMATIONS --- */
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
 .scanline {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
   background-size: 100% 3px, 3px 100%;
-  pointer-events: none;
-  z-index: 10;
+  pointer-events: none; z-index: 10;
 }
