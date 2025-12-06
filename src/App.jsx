@@ -4,7 +4,6 @@ import { Analytics } from '@vercel/analytics/react';
 import './App.css';
 
 // --- CONFIGURATION ---
-// REPLACE WITH YOUR ACTUAL RENDER BACKEND URL
 const BACKEND_URL = "https://oddztekbackend.onrender.com"; 
 
 // --- SOUND ASSETS ---
@@ -18,8 +17,45 @@ const AUDIO = {
   hack: new Audio('https://www.soundjay.com/communication/sounds/data-transfer-96kbps.mp3') 
 };
 
+// --- MATRIX RAIN COMPONENT ---
+const MatrixRain = ({ active }) => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    if (!active) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%^&*';
+    const fontSize = 16;
+    const columns = canvas.width / fontSize;
+    const drops = Array(Math.floor(columns)).fill(1);
+
+    const draw = () => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0F0';
+      ctx.font = `${fontSize}px monospace`;
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = chars.charAt(Math.floor(Math.random() * chars.length));
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+    };
+    const interval = setInterval(draw, 50);
+    return () => clearInterval(interval);
+  }, [active]);
+
+  return <canvas id="matrix-canvas" ref={canvasRef} style={{ display: active ? 'block' : 'none' }} />;
+};
+
 function App() {
   const [socket, setSocket] = useState(null);
+  const [connected, setConnected] = useState(false); // Connection State
   const [gameState, setGameState] = useState({
     username: 'guest',
     balance: 0,
@@ -34,14 +70,12 @@ function App() {
 
   const [input, setInput] = useState('');
   const [output, setOutput] = useState([
-    { text: 'ODDZTEK KERNEL v7.1 [POLISHED]', type: 'system' },
-    { text: 'Mounting virtual file system...', type: 'system' },
-    { text: 'Connection established.', type: 'success' },
+    { text: 'ODDZTEK KERNEL v8.0 [MATRIX]', type: 'system' },
+    { text: 'Initializing neural interface...', type: 'system' },
     { text: 'Type "help" for command list.', type: 'info' }
   ]);
   const bottomRef = useRef(null);
 
-  // Sound Helper
   const sfx = (name) => {
     if(AUDIO[name]) {
       AUDIO[name].currentTime = 0;
@@ -53,18 +87,19 @@ function App() {
   // --- INITIALIZATION ---
   useEffect(() => {
     sfx('boot');
-    
-    // Safety check for URL
-    if (!BACKEND_URL || BACKEND_URL.includes("YOUR_RENDER_URL")) {
-        setOutput(prev => [...prev, { text: "ERROR: Backend URL not configured.", type: "error" }]);
-        return;
-    }
+    if (!BACKEND_URL) return;
 
     const newSocket = io(BACKEND_URL);
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
+        setConnected(true);
         setOutput(prev => [...prev, { text: 'Mainframe Uplink: SECURE', type: 'success' }]);
+    });
+
+    newSocket.on('disconnect', () => {
+        setConnected(false);
+        setOutput(prev => [...prev, { text: 'CONNECTION LOST. Reconnecting...', type: 'error' }]);
     });
     
     newSocket.on('message', (msg) => {
@@ -83,12 +118,9 @@ function App() {
     return () => newSocket.close();
   }, []);
 
-  // Auto-scroll
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [output]);
 
-  const printLine = (text, type = 'response') => {
-    setOutput(prev => [...prev, { text, type }]);
-  };
+  const printLine = (text, type = 'response') => setOutput(prev => [...prev, { text, type }]);
 
   // --- COMMAND PARSER ---
   const handleCommand = (cmd) => {
@@ -102,55 +134,44 @@ function App() {
     const args = cleanCmd.split(' ');
     const command = args[0].toLowerCase();
 
-    if (!socket) return;
+    if (!socket || !connected) {
+      printLine("ERROR: System Offline. Please wait...", "error");
+      return;
+    }
 
     switch (command) {
       case 'help':
         printLine(`
-[ACCESS]
-  register [u] [p] (code) - Create Account (Optional Invite Code)
-  login [u] [p]           - Login
-  invite                  - Get Referral Code
-  status / whoami
-  logout
+[CORE]
+  register [u] [p] (code) | login [u] [p]
+  status | invite | logout | clear
   
 [ECONOMY]
-  mine           - Start Mining (20s)
-  daily          - Claim Reward
-  shop           - View Upgrades
-  buy [item]     - Purchase Item
-  inv            - Inventory
-  leaderboard    - Top Hackers
+  mine | daily | shop | buy [id]
+  inv | leaderboard | transfer [u] [amt]
   
 [HACKING]
-  scan [user]    - Recon Target
-  hack [user]    - Start Breach
-  guess [pin]    - Input PIN (Digit Reveal Active)
+  scan [u] | hack [u] | guess [pin]
+  brute [u] (Requires Tool)
   
-[COMMUNICATION]
-  mail check     - Read Inbox
-  mail send [u] [msg] - Send Message
+[MISSIONS]
+  maze           - Start Procedural Maze
+  server_hack    - Raid Oddztek Mainframe
+  nav [dir]      - Move in Maze/Server (n/s/e/w)
   
-[PUZZLES]
-  decrypt        - Start Logic Puzzle
-  solve [ans]    - Submit Answer
-
 [SYSTEM]
-  files / ls     - List Files
-  read [file]    - Read Log
-  clear          - Clear Screen
+  files | read [f] | mail check/send
         `, 'info');
         break;
 
       // Auth
       case 'register': 
-        // args[1]=user, args[2]=pass, args[3]=referralCode
         if (args[1] && args[2]) socket.emit('register', { username: args[1], password: args[2], referralCode: args[3] }); 
-        else printLine('Usage: register [username] [password] [optional_code]', 'error');
+        else printLine('Usage: register [user] [pass] [code?]', 'error');
         break;
       case 'login': 
         if (args[1] && args[2]) socket.emit('login', { username: args[1], password: args[2] }); 
-        else printLine('Usage: login [username] [password]', 'error');
+        else printLine('Usage: login [user] [pass]', 'error');
         break;
       case 'logout': window.location.reload(); break;
       case 'invite': socket.emit('invite'); break;
@@ -159,77 +180,59 @@ function App() {
       case 'mine': socket.emit('mine'); break;
       case 'daily': socket.emit('daily'); break;
       case 'shop': socket.emit('shop'); break;
-      case 'buy': 
-        if (args[1]) socket.emit('buy', args[1]);
-        else printLine('Usage: buy [item_id]', 'error');
-        break;
       case 'leaderboard': socket.emit('leaderboard'); break;
       case 'inv':
-      case 'inventory': 
-        printLine(`MODULES: ${gameState.inventory.length ? gameState.inventory.join(', ') : 'None'}`, 'info');
+      case 'inventory': socket.emit('inventory'); break; // Changed to server emit for accuracy
+      case 'buy': 
+        if (args[1]) socket.emit('buy', args[1]); 
+        else printLine('Usage: buy [item_id]', 'error');
+        break;
+      case 'transfer':
+        if (args[1] && args[2]) socket.emit('transfer', { target: args[1], amount: args[2] });
+        else printLine('Usage: transfer [user] [amount]', 'error');
         break;
 
-      // Hacking & Combat
+      // Hacking
       case 'hack': 
         if (args[1]) socket.emit('hack_init', args[1]);
-        else printLine('Usage: hack [target_username]', 'error');
+        else printLine('Usage: hack [user]', 'error');
         break;
-      
       case 'guess': 
         if (args[1]) socket.emit('guess', args[1]);
         else printLine('Usage: guess [number]', 'error');
         break;
-
       case 'scan': 
         if (args[1]) socket.emit('scan_player', args[1]);
-        else printLine('Usage: scan [target_username]', 'error');
+        else printLine('Usage: scan [user]', 'error');
+        break;
+      case 'brute':
+        if (args[1]) socket.emit('brute_force', args[1]);
+        else printLine('Usage: brute [user] (Needs Tool)', 'error');
         break;
 
-      // Communication
-      case 'mail':
-        if (args[1] === 'check') socket.emit('mail_check');
-        else if (args[1] === 'send') {
-          const recipient = args[2];
-          const message = args.slice(3).join(' ');
-          if (recipient && message) socket.emit('mail_send', { recipient, message });
-          else printLine('Usage: mail send [user] [message]', 'error');
-        } else {
-          printLine('Usage: mail check OR mail send [user] [msg]', 'error');
-        }
-        break;
-
-      // Puzzles
+      // Puzzles & Missions
       case 'decrypt': socket.emit('decrypt'); break;
-      case 'solve': 
-        if(args[1]) socket.emit('solve', args[1]);
-        else printLine('Usage: solve [answer]', 'error');
+      case 'solve': socket.emit('solve', args[1]); break;
+      case 'maze': socket.emit('maze_start'); break;
+      case 'server_hack': socket.emit('server_hack_start'); break;
+      case 'nav':
+      case 'move':
+        if (args[1]) socket.emit('navigate', args[1]); // n, s, e, w
+        else printLine('Usage: nav [n/s/e/w]', 'error');
         break;
 
       // System
-      case 'files': 
-      case 'ls':
-        socket.emit('files'); 
-        break;
-      
-      case 'read': 
-      case 'cat':
-        if (args[1]) socket.emit('read', args[1]);
-        else printLine('Usage: read [filename]', 'error');
+      case 'files': socket.emit('files'); break;
+      case 'read': socket.emit('read', args[1]); break;
+      case 'mail':
+        if (args[1] === 'check') socket.emit('mail_check');
+        else if (args[1] === 'send') socket.emit('mail_send', { recipient: args[2], message: args.slice(3).join(' ') });
+        else printLine('Usage: mail check OR mail send [u] [msg]', 'error');
         break;
 
       case 'status':
-      case 'whoami':
-        printLine(`
-USER: ${gameState.username}
-LEVEL: ${gameState.level} (XP: ${gameState.xp})
-BALANCE: ${gameState.balance} ODZ
-HARDWARE:
-  > CPU: v${gameState.cpuLevel}.0
-  > Network: v${gameState.networkLevel || 1}.0
-  > Security: v${gameState.securityLevel || 1}.0
-        `, 'success');
+        printLine(`USER: ${gameState.username} | LVL: ${gameState.level} | ODZ: ${gameState.balance}`, 'success');
         break;
-
       case 'clear': setOutput([]); break;
 
       default:
@@ -241,7 +244,11 @@ HARDWARE:
 
   return (
     <>
+      <MatrixRain active={gameState.theme === 'matrix'} />
       <div className={`terminal-container theme-${gameState.theme || 'green'}`} onClick={() => document.querySelector('input')?.focus()}>
+        <div className={connected ? "connection-status status-connected" : "connection-status status-disconnected"}>
+          {connected ? "ONLINE" : "OFFLINE"}
+        </div>
         <div className="scanline"></div>
         <div className="terminal-content">
           {output.map((line, i) => <div key={i} className={`line ${line.type}`}>{line.text}</div>)}
