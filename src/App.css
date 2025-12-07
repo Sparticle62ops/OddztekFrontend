@@ -1,16 +1,30 @@
-/* --- BASE & FONTS --- */
-@import url('https://fonts.googleapis.com/css2?family=VT323&family=Fira+Code:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
 
 body {
   margin: 0;
   padding: 0;
   background-color: #000;
-  font-family: 'Fira Code', 'Courier New', monospace; /* Default modern terminal font */
+  font-family: 'Fira Code', monospace;
   overflow: hidden;
   color: #eee;
 }
 
-/* --- MAIN CONTAINER --- */
+/* --- BOOT SCREEN --- */
+.boot-screen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+  background: #000;
+  cursor: pointer;
+  z-index: 9999;
+}
+.boot-screen h1 { color: #0f0; text-shadow: 0 0 10px #0f0; animation: blink 2s infinite; }
+.boot-screen p { color: #888; margin-top: 20px; }
+
+/* --- TERMINAL --- */
 .terminal-container {
   height: 100vh;
   width: 100vw;
@@ -18,141 +32,46 @@ body {
   box-sizing: border-box;
   overflow-y: auto;
   position: relative;
-  z-index: 2; /* Sit above matrix canvas */
+  z-index: 2;
 }
 
 /* --- THEMES --- */
+.theme-green { background: #050a05; color: #0f0; text-shadow: 0 0 4px #0f0; }
+.theme-green input { color: #0f0; caret-color: #0f0; }
 
-/* 1. GREEN (Default) */
-.theme-green {
-  background-color: #050a05;
-  color: #00ff00;
-  text-shadow: 0 0 3px #00cc00;
-}
-.theme-green input { color: #00ff00; caret-color: #00ff00; }
+.theme-amber { background: #1a1000; color: #fb0; text-shadow: 0 0 4px #fb0; }
+.theme-amber input { color: #fb0; caret-color: #fb0; }
 
-/* 2. AMBER (Retro) */
-.theme-amber {
-  background-color: #1a1000;
-  color: #ffb000;
-  text-shadow: 0 0 3px #cc8800;
-}
-.theme-amber input { color: #ffb000; caret-color: #ffb000; }
+.theme-plasma { background: #0a001a; color: #d0f; text-shadow: 0 0 5px #0ff; }
+.theme-plasma input { color: #0ff; caret-color: #d0f; }
 
-/* 3. PLASMA (Neon) */
-.theme-plasma {
-  background-color: #0a001a;
-  color: #e066ff;
-  text-shadow: 0 0 4px #b300ff;
-}
-.theme-plasma input { color: #00ffff; caret-color: #00ffff; }
-.theme-plasma .prompt { color: #00ffff; }
+.theme-matrix { background: rgba(0,0,0,0.9); color: #0f0; font-family: monospace; text-shadow: 0 0 2px #0f0; }
+.theme-matrix input { color: #fff; caret-color: #0f0; }
 
-/* 4. MATRIX (True Hacker) */
-.theme-matrix {
-  background-color: rgba(0, 0, 0, 0.85); /* Semi-transparent to see rain */
-  color: #00ff00;
-  font-family: 'VT323', monospace; /* Classic pixel font */
-  font-size: 1.2rem;
-  text-shadow: 0 0 2px #0f0;
-}
-.theme-matrix input { color: #fff; caret-color: #0f0; font-weight: bold; }
-.theme-matrix .line.special { color: #fff; background: #003300; }
-
-/* --- MATRIX RAIN CANVAS --- */
-/* This canvas sits behind the terminal content */
-#matrix-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  display: none; /* Hidden by default, shown via JS for matrix theme */
-  opacity: 0.3; /* Subtle background effect */
-}
-
-/* --- TEXT TYPES --- */
-.line { margin-bottom: 4px; white-space: pre-wrap; word-wrap: break-word; }
-.line.command { opacity: 0.7; font-weight: bold; }
+/* --- LINES --- */
+.line { margin-bottom: 4px; white-space: pre-wrap; word-wrap: break-word; line-height: 1.4; }
+.line.command { opacity: 0.5; margin-top: 10px; }
 .line.system { color: inherit; opacity: 0.8; font-style: italic; }
-.line.error { color: #ff4444; text-shadow: none; font-weight: bold; }
-.line.success { color: #00ffff; font-weight: bold; }
-.line.warning { color: #ffaa00; }
-.line.special { 
-  color: #ffff00; 
-  text-shadow: 0 0 8px #ffff00; 
-  font-weight: bold; 
-  border-left: 3px solid #ffff00;
-  padding-left: 10px;
-  animation: pulse 2s infinite; 
-}
-.line.info { opacity: 0.9; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 5px; }
+.line.error { color: #f44; text-shadow: none; font-weight: bold; }
+.line.success { color: #0ff; font-weight: bold; }
+.line.special { color: #ff0; text-shadow: 0 0 8px #ff0; border-left: 2px solid #ff0; padding-left: 10px; }
 
-/* --- START SCREEN OVERLAY --- */
-.start-overlay {
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  cursor: pointer;
-}
-.start-content {
-  text-align: center;
-  color: #00ff00;
-  font-family: 'VT323', monospace;
-  animation: pulse 2s infinite;
-}
-.start-content h1 { font-size: 3rem; margin: 0; text-shadow: 0 0 10px #0f0; }
-.start-content p { font-size: 1.5rem; }
-.blink { animation: blink 1s infinite; font-size: 2rem; }
-
-/* --- INPUT AREA --- */
-.input-line { display: flex; margin-top: 10px; }
+/* --- INPUT --- */
+.input-line { display: flex; margin-top: 15px; }
 .prompt { margin-right: 10px; font-weight: bold; }
-input {
-  background: transparent;
-  border: none;
-  outline: none;
-  font-family: inherit;
-  font-size: inherit;
-  flex-grow: 1;
-  text-shadow: inherit;
-}
+input { background: transparent; border: none; outline: none; font-family: inherit; font-size: 1rem; flex-grow: 1; }
 
-/* --- CONNECTION STATUS INDICATOR --- */
-.connection-status {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  z-index: 100;
-  font-weight: bold;
-  text-transform: uppercase;
+/* --- STATUS LIGHT --- */
+.status-light {
+  position: fixed; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%; z-index: 100;
 }
-.status-connected { color: #0f0; border: 1px solid #0f0; display: none; } /* Usually hidden */
-.status-disconnected { color: #f00; border: 1px solid #f00; background: rgba(0,0,0,0.8); animation: blink 1s infinite; }
+.status-light.on { background: #0f0; box-shadow: 0 0 10px #0f0; }
+.status-light.off { background: #f00; box-shadow: 0 0 10px #f00; animation: blink 0.5s infinite; }
 
-/* --- VISUAL EFFECTS --- */
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 .scanline {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
-              linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
   background-size: 100% 3px, 3px 100%;
-  pointer-events: none; 
-  z-index: 10;
+  pointer-events: none; z-index: 10;
 }
-
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
-
-/* Scrollbar Customization */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #000; }
-::-webkit-scrollbar-thumb { background: #333; }
-::-webkit-scrollbar-thumb:hover { background: #555; }
