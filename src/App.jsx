@@ -55,7 +55,7 @@ const MatrixRain = ({ active }) => {
 
 function App() {
   const [socket, setSocket] = useState(null);
-  const [connected, setConnected] = useState(false); // Connection State
+  const [connected, setConnected] = useState(false);
   const [gameState, setGameState] = useState({
     username: 'guest',
     balance: 0,
@@ -70,7 +70,7 @@ function App() {
 
   const [input, setInput] = useState('');
   const [output, setOutput] = useState([
-    { text: 'ODDZTEK KERNEL v8.0 [MATRIX]', type: 'system' },
+    { text: 'ODDZTEK KERNEL v9.0 [OMNIPOTENCE]', type: 'system' },
     { text: 'Initializing neural interface...', type: 'system' },
     { text: 'Type "help" for command list.', type: 'info' }
   ]);
@@ -145,22 +145,31 @@ function App() {
 [CORE]
   register [u] [p] (code) | login [u] [p]
   status | invite | logout | clear
+  theme [name]   - Switch Theme (green, amber, plasma, matrix)
+  ping           - Check latency
   
 [ECONOMY]
   mine | daily | shop | buy [id]
   inv | leaderboard | transfer [u] [amt]
+  flip [heads/tails] [amt] - Coinflip Gamble
   
 [HACKING]
   scan [u] | hack [u] | guess [pin]
   brute [u] (Requires Tool)
   
 [MISSIONS]
-  maze           - Start Procedural Maze
-  server_hack    - Raid Oddztek Mainframe
-  nav [dir]      - Move in Maze/Server (n/s/e/w)
+  server_hack    - Raid Oddztek Mainframe (Hard)
+  nav [dir]      - Move in Server (n/s/e/w)
+  
+[COMMUNICATION]
+  chat [msg]     - Global Chat
+  mail check     - Read Inbox
+  mail send [u] [msg] - Send Message
+  mail read [id] - Mark message as read
   
 [SYSTEM]
-  files | read [f] | mail check/send
+  files | read [f] 
+  sandbox [code] - Run JavaScript (Beta)
         `, 'info');
         break;
 
@@ -175,6 +184,20 @@ function App() {
         break;
       case 'logout': window.location.reload(); break;
       case 'invite': socket.emit('invite'); break;
+      
+      // System & Utility
+      case 'ping':
+        const start = Date.now();
+        socket.emit('ping', () => {
+            const ms = Date.now() - start;
+            printLine(`Pong! Latency: ${ms}ms`, 'success');
+        });
+        break;
+        
+      case 'theme':
+        if(args[1]) socket.emit('set_theme', args[1]);
+        else printLine('Usage: theme [green/amber/plasma/matrix]', 'error');
+        break;
 
       // Economy
       case 'mine': socket.emit('mine'); break;
@@ -182,7 +205,7 @@ function App() {
       case 'shop': socket.emit('shop'); break;
       case 'leaderboard': socket.emit('leaderboard'); break;
       case 'inv':
-      case 'inventory': socket.emit('inventory'); break; // Changed to server emit for accuracy
+      case 'inventory': socket.emit('inventory'); break;
       case 'buy': 
         if (args[1]) socket.emit('buy', args[1]); 
         else printLine('Usage: buy [item_id]', 'error');
@@ -191,8 +214,12 @@ function App() {
         if (args[1] && args[2]) socket.emit('transfer', { target: args[1], amount: args[2] });
         else printLine('Usage: transfer [user] [amount]', 'error');
         break;
-
-      // Hacking
+      case 'flip':
+      case 'coinflip':
+        if (args[1] && args[2]) socket.emit('coinflip', { side: args[1], amount: args[2] });
+        else printLine('Usage: flip [heads/tails] [amount]', 'error');
+        break;
+        // Hacking & Combat
       case 'hack': 
         if (args[1]) socket.emit('hack_init', args[1]);
         else printLine('Usage: hack [user]', 'error');
@@ -210,10 +237,7 @@ function App() {
         else printLine('Usage: brute [user] (Needs Tool)', 'error');
         break;
 
-      // Puzzles & Missions
-      case 'decrypt': socket.emit('decrypt'); break;
-      case 'solve': socket.emit('solve', args[1]); break;
-      case 'maze': socket.emit('maze_start'); break;
+      // Missions & Puzzles
       case 'server_hack': socket.emit('server_hack_start'); break;
       case 'nav':
       case 'move':
@@ -221,18 +245,71 @@ function App() {
         else printLine('Usage: nav [n/s/e/w]', 'error');
         break;
 
-      // System
-      case 'files': socket.emit('files'); break;
-      case 'read': socket.emit('read', args[1]); break;
+      // Communication
+      case 'chat':
+        const chatMsg = args.slice(1).join(' ');
+        if (chatMsg) socket.emit('global_chat', chatMsg);
+        else printLine('Usage: chat [message]', 'error');
+        break;
+
       case 'mail':
         if (args[1] === 'check') socket.emit('mail_check');
-        else if (args[1] === 'send') socket.emit('mail_send', { recipient: args[2], message: args.slice(3).join(' ') });
-        else printLine('Usage: mail check OR mail send [u] [msg]', 'error');
+        else if (args[1] === 'read' && args[2]) socket.emit('mail_read', args[2]); // New Read Logic
+        else if (args[1] === 'send') {
+            const recipient = args[2];
+            const message = args.slice(3).join(' ');
+            if(recipient && message) socket.emit('mail_send', { recipient, message });
+            else printLine('Usage: mail send [u] [msg]', 'error');
+        }
+        else printLine('Usage: mail check | mail read [id] | mail send [u] [msg]', 'error');
+        break;
+
+      // System
+      case 'files': 
+      case 'ls':
+        socket.emit('files'); 
+        break;
+      case 'read': 
+      case 'cat':
+        if (args[1]) socket.emit('read', args[1]); 
+        else printLine('Usage: read [filename]', 'error');
+        break;
+
+      // Sandbox (Local JS Execution)
+      case 'sandbox':
+      case 'js':
+        const code = args.slice(1).join(' ');
+        if (!code) {
+            printLine('Usage: sandbox [javascript_code]', 'error');
+            break;
+        }
+        try {
+            // Basic sandboxing using Function constructor (Note: Still has risks, but okay for game)
+            // We restrict access to window/document to prevent UI breakage
+            const safeEval = new Function('console', `
+                const window = undefined; 
+                const document = undefined; 
+                return (${code});
+            `);
+            const result = safeEval({ log: (msg) => printLine(`[JS] ${msg}`, 'info') });
+            if (result !== undefined) printLine(`[JS Result] ${result}`, 'success');
+        } catch (e) {
+            printLine(`[JS Error] ${e.message}`, 'error');
+        }
         break;
 
       case 'status':
-        printLine(`USER: ${gameState.username} | LVL: ${gameState.level} | ODZ: ${gameState.balance}`, 'success');
+        printLine(`
+USER: ${gameState.username}
+LEVEL: ${gameState.level} (XP: ${gameState.xp})
+BALANCE: ${gameState.balance} ODZ
+HARDWARE:
+  > CPU: v${gameState.cpuLevel}.0
+  > Network: v${gameState.networkLevel || 1}.0
+  > Security: v${gameState.securityLevel || 1}.0
+        `, 'success');
         break;
+
       case 'clear': setOutput([]); break;
 
       default:
