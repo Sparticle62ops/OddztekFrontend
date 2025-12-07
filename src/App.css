@@ -135,3 +135,67 @@ input {
 ::-webkit-scrollbar-track { background: #000; }
 ::-webkit-scrollbar-thumb { background: #333; }
 ::-webkit-scrollbar-thumb:hover { background: #555; }
+/* --- V10.0 NEW FEATURES --- */
+
+/* START SCREEN OVERLAY */
+.start-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.start-box {
+  border: 2px solid #0f0;
+  padding: 40px;
+  text-align: center;
+  color: #0f0;
+  font-family: 'Fira Code', monospace;
+  box-shadow: 0 0 20px #0f0;
+}
+
+.start-box h1 { margin: 0 0 10px 0; font-size: 2rem; }
+.start-box .blink { font-size: 2rem; animation: blink 1s infinite; }
+
+/* GLITCH EFFECT FOR 'glitch' TYPE MESSAGES */
+.line.glitch {
+  color: #ff00ff;
+  font-weight: bold;
+  position: relative;
+  animation: glitch-anim 0.3s infinite;
+}
+
+@keyframes glitch-anim {
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+  100% { transform: translate(0); }
+}
+
+/* FACTION CHAT STYLE */
+.line.faction {
+  color: #0088ff;
+  border-left: 2px solid #0088ff;
+  padding-left: 8px;
+}
+
+/* TYPEWRITER CURSOR */
+.line.typing::after {
+  content: '█';
+  animation: blink 0.5s infinite;
+  margin-left: 5px;
+  opacity: 0.7;
+}
+.line.done::after {
+  content: '';
+  display: none;
+}
