@@ -5,7 +5,6 @@ import './App.css';
 
 const BACKEND_URL = "https://oddztekbackend.onrender.com"; 
 
-// --- SOUND ASSETS ---
 const AUDIO = {
   key: new Audio('https://www.soundjay.com/button/sounds/button-16.mp3'),
   error: new Audio('https://www.soundjay.com/button/sounds/button-10.mp3'),
@@ -15,31 +14,22 @@ const AUDIO = {
   hack: new Audio('https://www.soundjay.com/communication/sounds/data-transfer-96kbps.mp3')
 };
 
-// --- SAFE TYPEWRITER COMPONENT ---
-// Fixed to prevent text from being invisible
+// --- ROBUST TYPEWRITER ---
 const TerminalLine = ({ text, type, instant }) => {
   const [displayed, setDisplayed] = useState(instant ? text : '');
   const hasRun = useRef(false);
 
   useEffect(() => {
-    if (instant || hasRun.current) {
-        setDisplayed(text);
-        return;
-    }
+    if (instant || hasRun.current) { setDisplayed(text); return; }
     hasRun.current = true;
-
-    let index = 0;
-    const speed = 10; 
-    
-    // Safety: If text is undefined, don't crash
     if(!text) return;
 
+    let index = 0;
     const interval = setInterval(() => {
       setDisplayed(text.slice(0, index + 1));
       index++;
       if (index >= text.length) clearInterval(interval);
-    }, speed);
-
+    }, 10);
     return () => clearInterval(interval);
   }, [text, instant]);
 
@@ -92,9 +82,9 @@ function App() {
   
   const [input, setInput] = useState('');
   const [output, setOutput] = useState([
-    { text: 'ODDZTEK KERNEL v10.2 [RECOVERY MODE]', type: 'system', instant: true },
-    { text: 'Restoring missing modules...', type: 'system', instant: true },
-    { text: 'Type "help" for commands.', type: 'info', instant: true },
+    { text: 'ODDZTEK KERNEL v10.3 [STABLE]', type: 'system', instant: true },
+    { text: 'Modules loaded. System Ready.', type: 'system', instant: true },
+    { text: 'Type "help" for command list.', type: 'info', instant: true },
   ]);
   const bottomRef = useRef(null);
 
@@ -107,7 +97,6 @@ function App() {
   }, [started]);
 
   const printLine = (text, type = 'response', instant = false) => {
-    // Generate unique ID to force React to render new lines
     const id = Date.now() + Math.random().toString();
     setOutput(prev => [...prev, { text, type, instant, id }]);
   };
@@ -115,13 +104,10 @@ function App() {
   const initializeSystem = () => {
     setStarted(true);
     sfx('boot');
-    console.log("System Initializing...");
-
     const newSocket = io(BACKEND_URL);
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      console.log("Socket Connected:", newSocket.id);
       setConnected(true);
       const savedToken = localStorage.getItem('oddztek_token');
       if (savedToken) {
@@ -131,21 +117,22 @@ function App() {
     });
 
     newSocket.on('disconnect', () => {
-      console.log("Socket Disconnected");
       setConnected(false);
       printLine('CONNECTION LOST. Retrying...', 'error');
     });
 
     newSocket.on('message', (msg) => {
-      console.log("Received Message:", msg);
       printLine(msg.text, msg.type, msg.instant);
       if (msg.type === 'error') sfx('error');
       if (msg.type === 'success') sfx('success');
       if (msg.type === 'special') sfx('hack');
     });
 
+    newSocket.on('pong', (ms) => {
+        printLine(`Pong! Latency: ${Date.now() - ms}ms`, 'success');
+    });
+
     newSocket.on('player_data', (data) => {
-      console.log("Player Data Update:", data);
       setGameState(prev => ({ ...prev, ...data }));
       if (data.theme) document.body.className = `theme-${data.theme}`;
       if (data.token) localStorage.setItem('oddztek_token', data.token);
@@ -161,27 +148,22 @@ function App() {
     if (!cleanCmd) return;
     sfx('key');
     
-    // 1. Print user command immediately
     setOutput(prev => [...prev, { text: `${gameState.username || 'guest'}@oddztek:~$ ${cleanCmd}`, type: 'command', instant: true, id: Date.now() }]);
 
     const args = cleanCmd.split(' ');
     const command = args[0].toLowerCase();
 
-    // 2. Check connection
     if (!socket || !connected) {
       printLine("ERROR: System Offline. Check Uplink.", "error");
       return;
     }
-
-    // 3. Command Switch
-    console.log("Emitting command:", command, args);
 
     switch (command) {
       case 'help':
         printLine(`
 [CORE]
   register [u] [p] | login [u] [p] | logout
-  ping             - Check latency
+  ping | status | clear
   theme [name]     - Themes: green, amber, plasma, matrix
   
 [ECONOMY]
@@ -205,12 +187,13 @@ function App() {
         break;
 
       // --- CORE ---
-      case 'ping':
-        const start = Date.now();
-        socket.emit('ping', () => {
-            printLine(`Pong! Latency: ${Date.now() - start}ms`, 'success');
-        });
+      case 'ping': socket.emit('ping', Date.now()); break;
+      case 'status':
+      case 'whoami':
+      case 'balance':
+        printLine(`User: ${gameState.username}\nLevel: ${gameState.level}\nBalance: ${gameState.balance} ODZ`, 'info', true);
         break;
+      
       case 'register': 
         if(args[1] && args[2]) socket.emit('register', { username: args[1], password: args[2] });
         else printLine('Usage: register [user] [pass]', 'error');
@@ -227,30 +210,18 @@ function App() {
       case 'daily': socket.emit('daily'); break;
       case 'shop': socket.emit('shop'); break;
       case 'leaderboard': socket.emit('leaderboard'); break;
-      case 'inv': 
-      case 'inventory': socket.emit('inventory'); break;
+      case 'inv': socket.emit('inventory'); break;
       case 'buy': if(args[1]) socket.emit('buy', args[1]); break;
       case 'transfer': if(args[1] && args[2]) socket.emit('transfer', { target: args[1], amount: args[2] }); break;
-      
-      // Fixed Coinflip
-      case 'flip': 
-      case 'coinflip':
-        if(args[1] && args[2]) socket.emit('coinflip', { side: args[1], amount: args[2] }); 
-        else printLine('Usage: flip [heads/tails] [amount]', 'error');
-        break;
+      case 'flip': if(args[1] && args[2]) socket.emit('coinflip', { side: args[1], amount: args[2] }); break;
 
-      // --- FILES & SYSTEM (RESTORED) ---
-      case 'files':
-      case 'ls':
-         socket.emit('files');
-         break;
-      case 'read':
-      case 'cat':
-         if(args[1]) socket.emit('read', args[1]);
-         else printLine('Usage: read [filename]', 'error');
-         break;
+      // --- FILES & SYSTEM ---
+      case 'files': socket.emit('files'); break;
+      case 'ls': socket.emit('files'); break;
+      case 'read': if(args[1]) socket.emit('read', args[1]); break;
+      case 'cat': if(args[1]) socket.emit('read', args[1]); break;
+      
       case 'sandbox':
-      case 'js':
         const code = args.slice(1).join(' ');
         try {
             const safeEval = new Function('console', `return (${code})`);
@@ -267,7 +238,7 @@ function App() {
       case 'nuke': socket.emit('use_tool', { tool: 'logic_bomb', target: args[1] }); break;
       case 'brute': socket.emit('brute_force', args[1]); break;
 
-      // --- SOCIAL & CAMPAIGN ---
+      // --- SOCIAL ---
       case 'chat': 
         const msg = args.slice(1).join(' ');
         if(msg) socket.emit('global_chat', msg); 
@@ -291,11 +262,7 @@ function App() {
         break;
 
       case 'server_hack': socket.emit('server_hack_start'); break;
-      case 'nav': 
-      case 'move':
-        if(args[1]) socket.emit('navigate', args[1]);
-        else printLine('Usage: nav [n/s/e/w]', 'error');
-        break;
+      case 'nav': if(args[1]) socket.emit('navigate', args[1]); break;
 
       case 'clear': setOutput([]); break;
       default: printLine(`Unknown command: ${command}`, 'error');
@@ -316,9 +283,7 @@ function App() {
         </div>
       )}
       <div className={`terminal-container theme-${gameState.theme || 'green'}`} onClick={() => document.querySelector('input')?.focus()}>
-        <div className={connected ? "connection-status status-connected" : "connection-status status-disconnected"}>
-            {connected ? "NET: ONLINE" : "NET: OFFLINE"}
-        </div>
+        <div className="connection-status">{connected ? "NET: ONLINE" : "NET: OFFLINE"}</div>
         <div className="scanline"></div>
         <div className="terminal-content">
           {output.map((line) => (
