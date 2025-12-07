@@ -5,7 +5,7 @@ import './App.css';
 
 const BACKEND_URL = "https://oddztekbackend.onrender.com"; 
 
-// --- AUDIO ASSETS ---
+// --- SOUND ASSETS ---
 const AUDIO = {
   key: new Audio('https://www.soundjay.com/button/sounds/button-16.mp3'),
   error: new Audio('https://www.soundjay.com/button/sounds/button-10.mp3'),
@@ -15,23 +15,33 @@ const AUDIO = {
   hack: new Audio('https://www.soundjay.com/communication/sounds/data-transfer-96kbps.mp3')
 };
 
-// --- ROBUST TYPEWRITER COMPONENT ---
+// --- SAFE TYPEWRITER COMPONENT ---
+// Fixed to prevent text from being invisible
 const TerminalLine = ({ text, type, instant }) => {
   const [displayed, setDisplayed] = useState(instant ? text : '');
-  
+  const hasRun = useRef(false);
+
   useEffect(() => {
-    if (instant) return;
+    if (instant || hasRun.current) {
+        setDisplayed(text);
+        return;
+    }
+    hasRun.current = true;
+
+    let index = 0;
+    const speed = 10; 
     
-    let i = 0;
-    const speed = type === 'error' ? 2 : 10; // Faster typing
-    const timer = setInterval(() => {
-      setDisplayed(text.slice(0, i + 1));
-      i++;
-      if (i >= text.length) clearInterval(timer);
+    // Safety: If text is undefined, don't crash
+    if(!text) return;
+
+    const interval = setInterval(() => {
+      setDisplayed(text.slice(0, index + 1));
+      index++;
+      if (index >= text.length) clearInterval(interval);
     }, speed);
 
-    return () => clearInterval(timer);
-  }, [text, type, instant]);
+    return () => clearInterval(interval);
+  }, [text, instant]);
 
   return <div className={`line ${type}`}>{displayed}</div>;
 };
@@ -82,8 +92,9 @@ function App() {
   
   const [input, setInput] = useState('');
   const [output, setOutput] = useState([
-    { text: 'ODDZTEK KERNEL v10.1 [STABLE]', type: 'system', instant: true },
-    { text: 'Loading modules...', type: 'system', instant: true },
+    { text: 'ODDZTEK KERNEL v10.2 [RECOVERY MODE]', type: 'system', instant: true },
+    { text: 'Restoring missing modules...', type: 'system', instant: true },
+    { text: 'Type "help" for commands.', type: 'info', instant: true },
   ]);
   const bottomRef = useRef(null);
 
@@ -96,39 +107,45 @@ function App() {
   }, [started]);
 
   const printLine = (text, type = 'response', instant = false) => {
-    setOutput(prev => [...prev, { text, type, instant, id: Date.now() + Math.random() }]);
+    // Generate unique ID to force React to render new lines
+    const id = Date.now() + Math.random().toString();
+    setOutput(prev => [...prev, { text, type, instant, id }]);
   };
 
   const initializeSystem = () => {
     setStarted(true);
     sfx('boot');
+    console.log("System Initializing...");
+
     const newSocket = io(BACKEND_URL);
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
+      console.log("Socket Connected:", newSocket.id);
       setConnected(true);
       const savedToken = localStorage.getItem('oddztek_token');
       if (savedToken) {
         newSocket.emit('login_token', savedToken);
         printLine('Token detected. Authenticating...', 'system');
-      } else {
-        printLine('Type "help" to begin.', 'info');
       }
     });
 
     newSocket.on('disconnect', () => {
+      console.log("Socket Disconnected");
       setConnected(false);
       printLine('CONNECTION LOST. Retrying...', 'error');
     });
 
     newSocket.on('message', (msg) => {
-      printLine(msg.text, msg.type, msg.instant || false);
+      console.log("Received Message:", msg);
+      printLine(msg.text, msg.type, msg.instant);
       if (msg.type === 'error') sfx('error');
       if (msg.type === 'success') sfx('success');
       if (msg.type === 'special') sfx('hack');
     });
 
     newSocket.on('player_data', (data) => {
+      console.log("Player Data Update:", data);
       setGameState(prev => ({ ...prev, ...data }));
       if (data.theme) document.body.className = `theme-${data.theme}`;
       if (data.token) localStorage.setItem('oddztek_token', data.token);
@@ -144,22 +161,25 @@ function App() {
     if (!cleanCmd) return;
     sfx('key');
     
-    const user = gameState.username || 'guest';
-    setOutput(prev => [...prev, { text: `${user}@oddztek:~$ ${cleanCmd}`, type: 'command', instant: true, id: Date.now() }]);
+    // 1. Print user command immediately
+    setOutput(prev => [...prev, { text: `${gameState.username || 'guest'}@oddztek:~$ ${cleanCmd}`, type: 'command', instant: true, id: Date.now() }]);
 
     const args = cleanCmd.split(' ');
     const command = args[0].toLowerCase();
 
+    // 2. Check connection
     if (!socket || !connected) {
       printLine("ERROR: System Offline. Check Uplink.", "error");
       return;
     }
 
+    // 3. Command Switch
+    console.log("Emitting command:", command, args);
+
     switch (command) {
       case 'help':
-        // Using instant=true to prevent glitchy rendering on long text
         printLine(`
-[CORE v10.1]
+[CORE]
   register [u] [p] | login [u] [p] | logout
   ping             - Check latency
   theme [name]     - Themes: green, amber, plasma, matrix
@@ -167,25 +187,20 @@ function App() {
 [ECONOMY]
   mine | daily | shop | buy [id]
   inv | leaderboard | transfer [u] [amt]
-  bounty [u] [amt] - Set bounty on player
+  flip [heads/tails] [amt] - Gamble
   
-[FACTIONS]
-  faction create [name] | faction join [name]
-  faction chat [msg]
+[SYSTEM & FILES]
+  files | ls      - List files
+  read [file]     - Read file
+  sandbox [code]  - Run JS
   
 [HACKING]
   scan [u] | hack [u] | guess [pin]
-  brute [u]      - Auto-Cracker (Tool)
-  spy [u]        - Install Keylogger
-  nuke [u]       - Plant Logic Bomb
+  brute [u] | spy [u] | nuke [u]
   
-[CAMPAIGN & SOCIAL]
-  chat [msg]     - Global Chat
-  mail check     - Inbox (NPC & Players)
-  mail read [id] - Read email
-  mail send [u] [msg] - Send email
-  server_hack    - Story Mission
-  nav [n/s/e/w]  - Navigation
+[SOCIAL & MISSIONS]
+  chat [msg] | mail check | mail send [u] [m]
+  server_hack | nav [n/s/e/w]
         `, 'info', true);
         break;
 
@@ -193,7 +208,7 @@ function App() {
       case 'ping':
         const start = Date.now();
         socket.emit('ping', () => {
-          printLine(`Pong! Latency: ${Date.now() - start}ms`, 'success');
+            printLine(`Pong! Latency: ${Date.now() - start}ms`, 'success');
         });
         break;
       case 'register': 
@@ -212,16 +227,39 @@ function App() {
       case 'daily': socket.emit('daily'); break;
       case 'shop': socket.emit('shop'); break;
       case 'leaderboard': socket.emit('leaderboard'); break;
-      case 'inv': socket.emit('inventory'); break;
+      case 'inv': 
+      case 'inventory': socket.emit('inventory'); break;
       case 'buy': if(args[1]) socket.emit('buy', args[1]); break;
       case 'transfer': if(args[1] && args[2]) socket.emit('transfer', { target: args[1], amount: args[2] }); break;
-      case 'flip': if(args[1] && args[2]) socket.emit('coinflip', { side: args[1], amount: args[2] }); break;
       
-      // --- BOUNTY & TOOLS ---
-      case 'bounty': 
-        if(args[1] && args[2]) socket.emit('set_bounty', { target: args[1], amount: args[2] });
-        else printLine('Usage: bounty [user] [amount]', 'error');
+      // Fixed Coinflip
+      case 'flip': 
+      case 'coinflip':
+        if(args[1] && args[2]) socket.emit('coinflip', { side: args[1], amount: args[2] }); 
+        else printLine('Usage: flip [heads/tails] [amount]', 'error');
         break;
+
+      // --- FILES & SYSTEM (RESTORED) ---
+      case 'files':
+      case 'ls':
+         socket.emit('files');
+         break;
+      case 'read':
+      case 'cat':
+         if(args[1]) socket.emit('read', args[1]);
+         else printLine('Usage: read [filename]', 'error');
+         break;
+      case 'sandbox':
+      case 'js':
+        const code = args.slice(1).join(' ');
+        try {
+            const safeEval = new Function('console', `return (${code})`);
+            const res = safeEval({ log: (m) => printLine(`[JS] ${m}`, 'info') });
+            if(res !== undefined) printLine(`Result: ${res}`, 'success');
+        } catch(e) { printLine(`JS Error: ${e.message}`, 'error'); }
+        break;
+
+      // --- HACKING ---
       case 'hack': if(args[1]) socket.emit('hack_init', args[1]); break;
       case 'guess': if(args[1]) socket.emit('guess', args[1]); break;
       case 'scan': if(args[1]) socket.emit('scan', args[1]); break;
@@ -239,12 +277,10 @@ function App() {
         if(args[1] === 'check') socket.emit('mail_check');
         else if(args[1] === 'read') socket.emit('mail_read', args[2]);
         else if(args[1] === 'send') {
-           const recipient = args[2];
-           const body = args.slice(3).join(' ');
-           if(recipient && body) socket.emit('mail_send', { recipient, body });
-           else printLine('Usage: mail send [user] [message]', 'error');
+           if(args[2] && args[3]) socket.emit('mail_send', { recipient: args[2], body: args.slice(3).join(' ') });
+           else printLine('Usage: mail send [user] [msg]', 'error');
         }
-        else printLine('Usage: mail check | read [id] | send [u] [msg]', 'error');
+        else printLine('Usage: mail check | read [id] | send [u] [m]', 'error');
         break;
       
       case 'faction':
@@ -280,7 +316,9 @@ function App() {
         </div>
       )}
       <div className={`terminal-container theme-${gameState.theme || 'green'}`} onClick={() => document.querySelector('input')?.focus()}>
-        <div className="connection-status">{connected ? "NET: ONLINE" : "NET: OFFLINE"}</div>
+        <div className={connected ? "connection-status status-connected" : "connection-status status-disconnected"}>
+            {connected ? "NET: ONLINE" : "NET: OFFLINE"}
+        </div>
         <div className="scanline"></div>
         <div className="terminal-content">
           {output.map((line) => (
