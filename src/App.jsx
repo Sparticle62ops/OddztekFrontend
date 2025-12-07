@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/react';
 import './App.css';
 
 // --- CONFIGURATION ---
+// REPLACE THIS URL WITH YOUR RENDER BACKEND URL IF IT CHANGED
 const BACKEND_URL = "https://oddztekbackend.onrender.com"; 
 
 // --- SOUND ASSETS ---
@@ -84,7 +85,7 @@ function App() {
     setBooted(true);
     sfx('boot');
     setOutput([
-        { text: 'ODDZTEK KERNEL v10.1 [STABLE]', type: 'system' },
+        { text: 'ODDZTEK KERNEL v10.2 [STABLE]', type: 'system' },
         { text: 'Initializing neural interface...', type: 'system' },
         { text: 'Type "help" for command list.', type: 'info' }
     ]);
@@ -98,7 +99,6 @@ function App() {
         setConnected(true);
         printLine('Mainframe Uplink: SECURE', 'success');
         
-        // Auto-Login Check
         const savedToken = localStorage.getItem('oddztek_token');
         if (savedToken) {
             newSocket.emit('auth_token', savedToken);
@@ -113,7 +113,6 @@ function App() {
     });
     
     newSocket.on('message', (msg) => {
-      // Remove Typewriter effect logic here, just push plain text
       printLine(msg.text, msg.type);
       if (msg.type === 'error') sfx('error');
       if (msg.type === 'special') sfx('hack');
@@ -146,14 +145,7 @@ function App() {
     const args = cleanCmd.split(' ');
     const command = args[0].toLowerCase();
 
-    if (!socket || !connected) {
-      printLine("ERROR: System Offline. Please wait...", "error");
-      return;
-    }
-
-    // --- CLIENT-SIDE COMMANDS ---
-    // These commands are handled entirely by the frontend
-    
+    // 1. LOCAL COMMANDS (Handled Client-Side)
     if (command === 'clear') {
         setOutput([]);
         setInput('');
@@ -163,6 +155,31 @@ function App() {
     if (command === 'logout') {
         localStorage.removeItem('oddztek_token');
         window.location.reload();
+        return;
+    }
+
+    if (command === 'ping') {
+        const ms = Math.floor(Math.random() * 40 + 20); // Fake latency for feel
+        printLine(`Pong! Latency: ${ms}ms`, 'success');
+        setInput('');
+        return;
+    }
+
+    if (command === 'sandbox' || command === 'js') {
+        const code = args.slice(1).join(' ');
+        if (!code) {
+            printLine('Usage: sandbox [js_code]', 'error');
+        } else {
+            try {
+                // Basic eval for prototype (Safe-ish context)
+                // eslint-disable-next-line no-new-func
+                const result = new Function(`return (${code})`)();
+                printLine(`[JS]: ${result}`, 'success');
+            } catch (e) {
+                printLine(`[JS Error]: ${e.message}`, 'error');
+            }
+        }
+        setInput('');
         return;
     }
 
@@ -183,10 +200,6 @@ function App() {
   scan [u] | hack [u] | guess [pin]
   brute [u] (Requires Tool)
   
-[MISSIONS]
-  server_hack    - Raid Oddztek Mainframe (Hard)
-  nav [dir]      - Move in Server (n/s/e/w)
-  
 [COMMUNICATION]
   chat [msg]     - Global Chat
   mail check     - Read Inbox
@@ -201,10 +214,11 @@ function App() {
         return;
     }
 
-    // --- SERVER COMMANDS ---
-    // If not a client command, send to server via the unified 'cmd' event
-    // The previous version had separate emits for everything, but the V10 backend
-    // expects a single 'cmd' event.
+    // 2. SERVER COMMANDS
+    if (!socket || !connected) {
+      printLine("ERROR: System Offline. Please wait...", "error");
+      return;
+    }
     
     socket.emit('cmd', { command: command, args: args.slice(1) });
     setInput('');
@@ -218,6 +232,13 @@ function App() {
       </div>
     );
   }
+
+  // Define input style directly based on theme to fix white text issue
+  const inputStyle = {
+    color: gameState.theme === 'matrix' ? '#0f0' : 
+           gameState.theme === 'amber' ? '#fb0' :
+           gameState.theme === 'plasma' ? '#0ff' : '#0f0'
+  };
 
   return (
     <>
@@ -234,6 +255,7 @@ function App() {
             <input 
               type="text" 
               value={input} 
+              style={inputStyle} /* FORCE COLOR STYLE */
               onChange={(e) => setInput(e.target.value)} 
               onKeyDown={(e) => e.key === 'Enter' && handleCommand(input)} 
               autoFocus 
