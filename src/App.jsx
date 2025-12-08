@@ -165,14 +165,17 @@ function App() {
           ))}
           <div className="input-line">
             <span className="prompt">{gameState.username || 'guest'}@oddztek:~$</span>
-            <input 
-              type="text" 
-              value={input} 
-              style={inputStyle}
-              onChange={(e) => setInput(e.target.value)} 
-              onKeyDown={(e) => e.key === 'Enter' && handleCommand(input)} 
-              autoFocus 
-            />
+            <div className="input-wrapper" style={{ display: 'flex', width: '100%' }}>
+                <input 
+                  type="text" 
+                  value={input} 
+                  style={inputStyle}
+                  onChange={(e) => setInput(e.target.value)} 
+                  onKeyDown={(e) => e.key === 'Enter' && handleCommand(input)} 
+                  autoFocus 
+                />
+                <span className="blinking-cursor">_</span>
+            </div>
           </div>
           <div ref={bottomRef} />
         </div>
