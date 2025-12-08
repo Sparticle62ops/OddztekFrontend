@@ -5,8 +5,8 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #050505;
-  font-family: 'Fira Code', monospace;
+  background-color: #000;
+  font-family: 'Fira Code', 'Courier New', monospace;
   overflow: hidden;
   color: #eee;
   -webkit-font-smoothing: antialiased;
@@ -16,78 +16,96 @@ body {
 .terminal-container {
   height: 100vh;
   width: 100vw;
-  padding: 25px;
+  padding: 20px;
   box-sizing: border-box;
   overflow-y: auto;
   position: relative;
-  z-index: 2;
+  z-index: 2; /* Sit ABOVE matrix canvas */
   font-size: 1rem;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
-/* --- THEMES (ENHANCED) --- */
+/* --- THEMES --- */
 
-/* 1. GREEN (Classic Terminal) */
+/* 1. GREEN (Classic) */
 .theme-green {
-  background-color: #0a0f0a;
-  color: #4af626;
-  text-shadow: 0 0 4px rgba(74, 246, 38, 0.6);
+  background-color: #050a05;
+  color: #00ff00;
+  text-shadow: 0 0 3px #00cc00;
 }
-.theme-green .prompt { color: #2ecc71; text-shadow: none; }
-.theme-green input { color: #4af626;caret-color: #4af626; }
+.theme-green input { color: #00ff00; caret-color: transparent; } /* Hide default caret for custom one */
+.theme-green .blinking-cursor { background-color: #00ff00; }
 
-/* 2. AMBER (Retro Fallout Style) */
+/* 2. AMBER (Retro) */
 .theme-amber {
   background-color: #120d00;
   color: #ffb000;
-  text-shadow: 0 0 3px rgba(255, 176, 0, 0.7);
+  text-shadow: 0 0 3px #cc8800;
 }
-.theme-amber .prompt { color: #ffd700; }
-.theme-amber input { color: #ffb000; caret-color: #ffb000; }
+.theme-amber input { color: #ffb000; caret-color: transparent; }
+.theme-amber .blinking-cursor { background-color: #ffb000; }
 
-/* 3. PLASMA (Cyberpunk Neon) */
+/* 3. PLASMA (Neon) */
 .theme-plasma {
-  background: linear-gradient(135deg, #0f0c29 0%, #302b63 100%);
-  color: #00e5ff;
-  text-shadow: 0 0 5px #00e5ff, 0 0 10px #00e5ff;
+  background-color: #080014;
+  color: #d000ff;
+  text-shadow: 0 0 4px #d000ff;
 }
-.theme-plasma .prompt { color: #ff00ff; text-shadow: 0 0 5px #ff00ff; }
-.theme-plasma input { color: #fff; caret-color: #00e5ff; }
-.theme-plasma .line.system { color: #d600ff; }
+.theme-plasma .prompt { color: #00ffff; text-shadow: 0 0 4px #00ffff; }
+.theme-plasma input { color: #00ffff; caret-color: transparent; }
+.theme-plasma .line.success { color: #00ffff !important; }
+.theme-plasma .blinking-cursor { background-color: #00ffff; }
 
 /* 4. MATRIX (Hacker Mode) */
 .theme-matrix {
-  background-color: rgba(0, 0, 0, 0.92); /* See rain behind */
-  color: #00ff41;
+  /* Semi-transparent to see rain */
+  background-color: rgba(0, 0, 0, 0.85); 
+  color: #00ff00;
   font-family: 'VT323', monospace;
   font-size: 1.4rem;
-  text-shadow: 0 0 2px #00ff41;
+  text-shadow: 0 0 2px #00ff00;
 }
-.theme-matrix .prompt { color: #fff; }
-.theme-matrix input { color: #fff; caret-color: #00ff41; font-weight: bold; }
+.theme-matrix input { color: #fff; caret-color: transparent; font-weight: bold; }
+.theme-matrix .line.special { background: #002200; color: #fff !important; }
+.theme-matrix .blinking-cursor { background-color: #00ff00; }
 
 /* --- TEXT STYLES --- */
-.line { margin-bottom: 6px; white-space: pre-wrap; word-wrap: break-word; }
-.line.command { opacity: 0.6; margin-top: 12px; font-weight: 700; }
-
-.line.system { opacity: 0.8; font-style: italic; letter-spacing: 0.5px; }
-.line.error { color: #ff3333 !important; text-shadow: 0 0 5px #ff0000 !important; font-weight: bold; }
-.line.success { color: #00ff99 !important; font-weight: bold; text-shadow: 0 0 5px #00ff99 !important; }
+.line { margin-bottom: 4px; white-space: pre-wrap; word-wrap: break-word; }
+.line.command { opacity: 0.6; margin-top: 8px; font-weight: bold; }
+.line.system { opacity: 0.8; font-style: italic; }
+.line.error { color: #ff3333 !important; text-shadow: none !important; font-weight: bold; }
+.line.success { color: #00ffff !important; font-weight: bold; text-shadow: 0 0 5px #00ffff; }
 .line.warning { color: #ffaa00 !important; font-weight: bold; }
+.line.info { opacity: 0.9; color: #ddd; margin-bottom: 10px; }
 .line.special { 
   color: #ffff00 !important; 
   text-shadow: 0 0 8px #ffff00; 
   font-weight: bold; 
-  border-left: 4px solid #ffff00;
-  padding-left: 12px;
-  background: rgba(255, 255, 0, 0.1);
-  animation: pulse 2s infinite; 
+  border-left: 3px solid #ffff00;
+  padding-left: 10px;
 }
-.line.info { opacity: 0.9; color: #ccc; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 8px; margin-bottom: 15px; }
 
-/* --- INPUT --- */
-.input-line { display: flex; align-items: center; margin-top: 20px; }
-.prompt { margin-right: 12px; font-weight: bold; white-space: nowrap; }
+/* --- INPUT AREA --- */
+.input-line { 
+  display: flex; 
+  align-items: center; 
+  margin-top: 15px; 
+  position: relative; /* For cursor positioning if needed */
+}
+
+.prompt { 
+  margin-right: 10px; 
+  font-weight: bold; 
+  white-space: nowrap; 
+}
+
+/* --- CUSTOM BLINKING CURSOR SETUP --- */
+.input-wrapper {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  position: relative;
+}
 
 input {
   background: transparent;
@@ -97,18 +115,29 @@ input {
   font-size: inherit;
   color: inherit;
   text-shadow: inherit;
-  caret-color: inherit;
+  /* We hide the default caret above in theme styles */
   flex-grow: 1;
   width: 100%;
+  padding: 0;
+  margin: 0;
 }
 
-/* --- VISUAL EFFECTS --- */
+/* The Cursor Element */
+.blinking-cursor {
+  display: inline-block;
+  width: 10px;
+  height: 1.2em;
+  margin-left: 2px;
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+/* --- VISUALS --- */
 #matrix-canvas {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  z-index: 0; display: none; opacity: 0.3;
+  z-index: 0; display: none; opacity: 0.4;
 }
 
-/* CRT SCANLINE */
 .scanline {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
@@ -117,31 +146,17 @@ input {
   pointer-events: none; z-index: 10;
 }
 
-/* SCREEN FLICKER */
-.terminal-container::after {
-  content: " ";
-  display: block;
-  position: absolute;
-  top: 0; left: 0; bottom: 0; right: 0;
-  background: rgba(18, 16, 16, 0.1);
-  opacity: 0;
-  z-index: 5;
-  pointer-events: none;
-  animation: flicker 0.15s infinite;
-}
-
-/* STATUS LIGHT */
+/* --- STATUS LIGHT --- */
 .connection-status {
   position: fixed; top: 15px; right: 15px;
-  padding: 4px 10px; border-radius: 4px;
-  font-size: 0.75rem; z-index: 100;
-  font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
-  backdrop-filter: blur(2px);
+  padding: 4px 8px; border-radius: 4px;
+  font-size: 0.7rem; z-index: 100;
+  font-weight: bold; text-transform: uppercase;
 }
-.status-connected { color: #0f0; border: 1px solid #0f0; background: rgba(0, 20, 0, 0.8); box-shadow: 0 0 5px #0f0; }
-.status-disconnected { color: #f00; border: 1px solid #f00; background: rgba(20, 0, 0, 0.9); animation: blink 1s infinite; }
+.status-connected { color: #0f0; border: 1px solid #0f0; background: rgba(0,20,0,0.8); }
+.status-disconnected { color: #f00; border: 1px solid #f00; background: rgba(20,0,0,0.9); animation: blink 1s infinite; }
 
-/* BOOT SCREEN */
+/* --- BOOT SCREEN --- */
 .boot-screen {
   display: flex; flex-direction: column;
   justify-content: center; align-items: center;
@@ -149,16 +164,15 @@ input {
   background: #000; cursor: pointer;
   z-index: 9999; font-family: 'Fira Code', monospace; color: #0f0;
 }
-.boot-screen h1 { font-size: 3rem; text-shadow: 0 0 20px #0f0; margin-bottom: 20px; animation: pulse 3s infinite; }
+.boot-screen h1 { font-size: 3rem; text-shadow: 0 0 15px #0f0; margin-bottom: 20px; animation: pulse 3s infinite; }
 .boot-screen p { color: #0a0; font-size: 1rem; animation: blink 1.5s infinite; letter-spacing: 2px; }
 
-/* ANIMATIONS */
+/* --- ANIMATIONS --- */
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-@keyframes flicker { 0% { opacity: 0.02; } 5% { opacity: 0.05; } 10% { opacity: 0.02; } 100% { opacity: 0.02; } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-/* SCROLLBAR */
-::-webkit-scrollbar { width: 10px; }
-::-webkit-scrollbar-track { background: #050505; border-left: 1px solid #333; }
-::-webkit-scrollbar-thumb { background: #444; border: 1px solid #000; }
-::-webkit-scrollbar-thumb:hover { background: #666; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #000; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
