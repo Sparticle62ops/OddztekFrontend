@@ -23,6 +23,11 @@ function App() {
   const [booted, setBooted] = useState(false);
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
+  
+  // --- NEW STATE FOR INTERACTIVE LOGIN ---
+  const [inputMode, setInputMode] = useState('command'); // 'command', 'login_user', 'login_pass', 'reg_user', 'reg_pass'
+  const [tempAuth, setTempAuth] = useState({ user: '', pass: '' });
+  
   const [gameState, setGameState] = useState({
     username: 'guest',
     balance: 0,
@@ -45,17 +50,16 @@ function App() {
     }
   }
 
-  // --- BOOT SEQUENCE ---
+  // --- BOOT SEQUENCE (Same as before) ---
   const handleBoot = () => {
     setBooted(true);
     sfx('boot');
     setOutput([
-        { text: 'ODDZTEK KERNEL v11.0 [MODULAR]', type: 'system' },
+        { text: 'ODDZTEK KERNEL v11.1 [SECURE]', type: 'system' },
         { text: 'Initializing neural interface...', type: 'system' },
         { text: 'Type "help" for command list.', type: 'info' }
     ]);
     
-    // Connect Socket
     if (!BACKEND_URL) return;
     const newSocket = io(BACKEND_URL);
     setSocket(newSocket);
@@ -63,13 +67,9 @@ function App() {
     newSocket.on('connect', () => {
         setConnected(true);
         printLine('Mainframe Uplink: SECURE', 'success');
-        
         const savedToken = localStorage.getItem('oddztek_token');
-        if (savedToken) {
-            newSocket.emit('auth_token', savedToken);
-        } else {
-            printLine('Login required.', 'info');
-        }
+        if (savedToken) newSocket.emit('auth_token', savedToken);
+        else printLine('Login required.', 'info');
     });
 
     newSocket.on('disconnect', () => {
@@ -82,8 +82,6 @@ function App() {
       if (msg.type === 'error') sfx('error');
       if (msg.type === 'special') sfx('hack');
     });
-    
-    newSocket.on('play_sound', (name) => sfx(name));
     
     newSocket.on('player_data', (data) => {
       setGameState(prev => ({ ...prev, ...data }));
@@ -98,9 +96,37 @@ function App() {
     setOutput(prev => [...prev, { text, type }]);
   };
 
-  // --- COMMAND PARSER (New Modular Logic) ---
+  // --- COMMAND PARSER ---
   const handleCommand = (cmd) => {
     const cleanCmd = cmd.trim();
+    
+    // --- HANDLING INTERACTIVE MODES ---
+    if (inputMode !== 'command') {
+        if (inputMode === 'login_user') {
+            setTempAuth({ ...tempAuth, user: cleanCmd });
+            printLine(`Username: ${cleanCmd}`, 'command');
+            printLine('Password:', 'info');
+            setInputMode('login_pass');
+        } else if (inputMode === 'login_pass') {
+            // Send Login
+            printLine('Password: ****', 'command');
+            socket.emit('login', { username: tempAuth.user, password: cleanCmd });
+            setInputMode('command');
+        } else if (inputMode === 'reg_user') {
+            setTempAuth({ ...tempAuth, user: cleanCmd });
+            printLine(`Username: ${cleanCmd}`, 'command');
+            printLine('Set Password:', 'info');
+            setInputMode('reg_pass');
+        } else if (inputMode === 'reg_pass') {
+            // Send Register
+            printLine('Password: ****', 'command');
+            socket.emit('register', { username: tempAuth.user, password: cleanCmd });
+            setInputMode('command');
+        }
+        setInput('');
+        return;
+    }
+
     if (!cleanCmd) return;
     sfx('key');
 
@@ -110,29 +136,51 @@ function App() {
     const args = cleanCmd.split(' ');
     const command = args[0].toLowerCase();
 
-    // 1. Check Local Commands first (from commandHandler.js)
-    const clientResult = processClientCommand(cleanCmd, gameState);
+    // 1. LOCAL COMMANDS
+    if (command === 'clear') { setOutput([]); setInput(''); return; }
+    if (command === 'logout') { localStorage.removeItem('oddztek_token'); window.location.reload(); return; }
 
-    if (clientResult.handled) {
-        if (clientResult.output) {
-            printLine(clientResult.output.text, clientResult.output.type);
-        }
-        if (clientResult.action === 'clear') setOutput([]);
-        if (clientResult.action === 'logout') {
-            localStorage.removeItem('oddztek_token');
-            window.location.reload();
+    // --- TRIGGER INTERACTIVE LOGIN ---
+    if (command === 'login') {
+        if (args[1]) {
+            // Old way still works: login user pass
+            if (args[2]) socket.emit('login', { username: args[1], password: args[2] });
+            else printLine('Usage: login [user] [pass]', 'error');
+        } else {
+            // Start Interactive Mode
+            printLine('Username:', 'info');
+            setInputMode('login_user');
         }
         setInput('');
-        return; // Stop here if client handled it
+        return;
     }
 
-    // 2. SERVER COMMANDS (Fallback)
+    if (command === 'register') {
+        if (args[1]) {
+            if (args[2]) socket.emit('register', { username: args[1], password: args[2], referralCode: args[3] });
+            else printLine('Usage: register [user] [pass] [code?]', 'error');
+        } else {
+            printLine('New Username:', 'info');
+            setInputMode('reg_user');
+        }
+        setInput('');
+        return;
+    }
+
+    // 2. SERVER COMMANDS
     if (!socket || !connected) {
       printLine("ERROR: System Offline. Please wait...", "error");
       return;
     }
     
-    // Send to backend
+    // Check local handler first
+    const clientResult = processClientCommand(cleanCmd, gameState);
+    if (clientResult.handled) {
+        if (clientResult.output) printLine(clientResult.output.text, clientResult.output.type);
+        setInput('');
+        return;
+    }
+    
     socket.emit('cmd', { command: command, args: args.slice(1) });
     setInput('');
   };
@@ -146,7 +194,6 @@ function App() {
     );
   }
 
-  // Force input style inheritance
   const inputStyle = {
     color: gameState.theme === 'matrix' ? '#0f0' : 
            gameState.theme === 'amber' ? '#fb0' :
@@ -164,15 +211,19 @@ function App() {
             <div key={i} className={`line ${line.type}`}>{line.text}</div>
           ))}
           <div className="input-line">
-            <span className="prompt">{gameState.username || 'guest'}@oddztek:~$</span>
+            <span className="prompt">
+                {inputMode === 'command' ? `${gameState.username || 'guest'}@oddztek:~$` : 
+                 (inputMode.includes('user') ? 'Username: ' : 'Password: ')}
+            </span>
             <div className="input-wrapper" style={{ display: 'flex', width: '100%' }}>
                 <input 
-                  type="text" 
+                  type={inputMode.includes('pass') ? "password" : "text"} 
                   value={input} 
                   style={inputStyle}
                   onChange={(e) => setInput(e.target.value)} 
                   onKeyDown={(e) => e.key === 'Enter' && handleCommand(input)} 
                   autoFocus 
+                  autoComplete="off"
                 />
                 <span className="blinking-cursor">_</span>
             </div>
