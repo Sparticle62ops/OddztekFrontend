@@ -85,43 +85,28 @@ body {
   padding-left: 10px;
 }
 
-/* --- INPUT AREA --- */
-.input-line { 
-  display: flex; 
-  align-items: center; 
-  margin-top: 15px; 
-}
-
-.prompt { 
-  margin-right: 10px; 
-  font-weight: bold; 
-  white-space: nowrap; 
-}
-
-.input-wrapper {
-  display: flex;
-  align-items: center;
-  flex-grow: 1;
-  position: relative;
-  /* This ensures the cursor stays with the text */
-  width: auto; 
-}
-
 input {
   background: transparent;
   border: none;
   outline: none;
+  
   font-family: inherit;
   font-size: inherit;
   color: inherit;
   text-shadow: inherit;
-  caret-color: transparent; /* Hide native cursor */
   
-  /* Critical: Width should fit content or be handled carefully */
-  /* For a fake cursor at the end, we need a different approach or simple width: 100% */
-  width: 100%; 
+  /* Restores the native blinking line */
+  caret-color: inherit; 
+  
+  flex-grow: 1;
+  width: 100%;
   padding: 0;
   margin: 0;
+}
+
+/* Remove the fake cursor styles entirely */
+.blinking-cursor {
+  display: none;
 }
 
 /* The Cursor Element */
