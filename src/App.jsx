@@ -98,9 +98,9 @@ function App() {
   const handleCommand = (cmd) => {
     const cleanCmd = cmd.trim(); // Allow empty if just pressing Enter to skip, but usually block
 
-    // --- INTERACTIVE MODE LOGIC ---
+   // --- INTERACTIVE MODE LOGIC (FIXED) ---
     if (inputMode !== 'command') {
-        if (!cleanCmd) return; // Wait for actual input
+        if (!cleanCmd) return; 
 
         if (inputMode === 'login_user') {
             setTempAuth(prev => ({ ...prev, user: cleanCmd }));
@@ -108,9 +108,14 @@ function App() {
             setInputMode('login_pass');
         } 
         else if (inputMode === 'login_pass') {
-            // Masked password echo
             setOutput(prev => [...prev, { text: `Password: ****`, type: 'command' }]);
-            if (socket) socket.emit('login', { username: tempAuth.user, password: cleanCmd });
+            
+            // FIX: Send as 'cmd' event to match backend v10+
+            if (socket) socket.emit('cmd', { 
+                command: 'login', 
+                args: [tempAuth.user, cleanCmd] 
+            });
+            
             setInputMode('command');
         } 
         else if (inputMode === 'reg_user') {
@@ -120,13 +125,18 @@ function App() {
         } 
         else if (inputMode === 'reg_pass') {
             setOutput(prev => [...prev, { text: `Password: ****`, type: 'command' }]);
-            if (socket) socket.emit('register', { username: tempAuth.user, password: cleanCmd });
+            
+            // FIX: Send as 'cmd' event
+            if (socket) socket.emit('cmd', { 
+                command: 'register', 
+                args: [tempAuth.user, cleanCmd] 
+            });
+            
             setInputMode('command');
         }
         setInput('');
         return;
     }
-
     // --- STANDARD COMMAND MODE ---
     if (!cleanCmd) return;
     sfx('key');
