@@ -8,7 +8,7 @@ const MatrixRain = ({ active }) => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     
-    // Set canvas size to full window
+    // Set canvas size
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
@@ -18,18 +18,14 @@ const MatrixRain = ({ active }) => {
     const drops = Array(Math.floor(columns)).fill(1);
 
     const draw = () => {
-      // Semi-transparent black to create fade trail effect
       ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      ctx.fillStyle = '#0F0'; // Matrix Green
+      ctx.fillStyle = '#0F0';
       ctx.font = `${fontSize}px monospace`;
 
       for (let i = 0; i < drops.length; i++) {
         const text = chars.charAt(Math.floor(Math.random() * chars.length));
         ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-        
-        // Randomly reset drop to top
         if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
             drops[i] = 0;
         }
@@ -38,8 +34,6 @@ const MatrixRain = ({ active }) => {
     };
 
     const interval = setInterval(draw, 50);
-
-    // Handle window resize
     const handleResize = () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
