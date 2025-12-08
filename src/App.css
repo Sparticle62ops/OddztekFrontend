@@ -85,29 +85,48 @@ body {
   padding-left: 10px;
 }
 
+/* --- INPUT AREA FIX --- */
+.input-line { 
+  display: flex;       /* Use Flexbox */
+  flex-direction: row; /* Force row direction */
+  align-items: center; 
+  margin-top: 15px;
+  width: 100%;         /* Take full width */
+}
+
+.prompt { 
+  margin-right: 12px; 
+  font-weight: bold; 
+  white-space: nowrap; /* Prevent prompt from wrapping */
+  flex-shrink: 0;      /* Prevent prompt from shrinking */
+}
+
 input {
   background: transparent;
   border: none;
   outline: none;
   
+  /* Font Inheritance */
   font-family: inherit;
   font-size: inherit;
   color: inherit;
   text-shadow: inherit;
   
-  /* Restores the native blinking line */
-  caret-color: inherit; 
+  /* Caret Visibility */
+  caret-color: auto; /* Let browser decide color based on text color */
   
-  flex-grow: 1;
-  width: 100%;
+  flex-grow: 1;    /* Take remaining space */
+  min-width: 0;    /* Allow shrinking if needed */
   padding: 0;
   margin: 0;
+  display: block;  /* Fix inline quirks */
 }
 
-/* Remove the fake cursor styles entirely */
-.blinking-cursor {
-  display: none;
-}
+/* Specific Caret Colors per Theme */
+.theme-green input { caret-color: #00ff00; }
+.theme-amber input { caret-color: #ffb000; }
+.theme-plasma input { caret-color: #00ffff; }
+.theme-matrix input { caret-color: #00ff00; }
 
 /* The Cursor Element */
 .blinking-cursor {
