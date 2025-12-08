@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { Analytics } from '@vercel/analytics/react';
-import { processClientCommand } from './utils/commandHandler'; // Import the new handler
+import { processClientCommand } from './utils/commandHandler';
 import MatrixRain from './components/MatrixRain';
 import './App.css';
 
@@ -24,7 +24,7 @@ function App() {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   
-  // --- NEW STATE FOR INTERACTIVE LOGIN ---
+  // --- INTERACTIVE MODE STATE ---
   const [inputMode, setInputMode] = useState('command'); // 'command', 'login_user', 'login_pass', 'reg_user', 'reg_pass'
   const [tempAuth, setTempAuth] = useState({ user: '', pass: '' });
   
@@ -50,12 +50,11 @@ function App() {
     }
   }
 
-  // --- BOOT SEQUENCE (Same as before) ---
   const handleBoot = () => {
     setBooted(true);
     sfx('boot');
     setOutput([
-        { text: 'ODDZTEK KERNEL v11.1 [SECURE]', type: 'system' },
+        { text: 'ODDZTEK KERNEL v11.2 [PATCHED]', type: 'system' },
         { text: 'Initializing neural interface...', type: 'system' },
         { text: 'Type "help" for command list.', type: 'info' }
     ]);
@@ -69,7 +68,7 @@ function App() {
         printLine('Mainframe Uplink: SECURE', 'success');
         const savedToken = localStorage.getItem('oddztek_token');
         if (savedToken) newSocket.emit('auth_token', savedToken);
-        else printLine('Login required.', 'info');
+        else printLine('Login required. Type "login".', 'info');
     });
 
     newSocket.on('disconnect', () => {
@@ -96,37 +95,44 @@ function App() {
     setOutput(prev => [...prev, { text, type }]);
   };
 
-  // --- COMMAND PARSER ---
   const handleCommand = (cmd) => {
-    const cleanCmd = cmd.trim();
-    
-    // --- HANDLING INTERACTIVE MODES ---
+    const cleanCmd = cmd.trim(); // Do not prevent empty input if just pressing enter to skip
+
+    // --- INTERACTIVE MODE LOGIC (The Fix) ---
     if (inputMode !== 'command') {
+        if (!cleanCmd) return; // Ignore empty enters in auth
+
         if (inputMode === 'login_user') {
-            setTempAuth({ ...tempAuth, user: cleanCmd });
-            printLine(`Username: ${cleanCmd}`, 'command');
-            printLine('Password:', 'info');
+            setTempAuth(prev => ({ ...prev, user: cleanCmd }));
+            // Echo the username typed (as a command line)
+            setOutput(prev => [...prev, { text: `Username: ${cleanCmd}`, type: 'command' }]);
+            // Prompt for password
+            // Don't print "Password:" yet, let the prompt in input-line handle it visually
             setInputMode('login_pass');
-        } else if (inputMode === 'login_pass') {
-            // Send Login
-            printLine('Password: ****', 'command');
-            socket.emit('login', { username: tempAuth.user, password: cleanCmd });
+        } 
+        else if (inputMode === 'login_pass') {
+            // Echo masked password
+            setOutput(prev => [...prev, { text: `Password: ****`, type: 'command' }]);
+            // Execute Login
+            if (socket) socket.emit('login', { username: tempAuth.user, password: cleanCmd });
+            // Reset mode
             setInputMode('command');
-        } else if (inputMode === 'reg_user') {
-            setTempAuth({ ...tempAuth, user: cleanCmd });
-            printLine(`Username: ${cleanCmd}`, 'command');
-            printLine('Set Password:', 'info');
+        } 
+        else if (inputMode === 'reg_user') {
+            setTempAuth(prev => ({ ...prev, user: cleanCmd }));
+            setOutput(prev => [...prev, { text: `New User: ${cleanCmd}`, type: 'command' }]);
             setInputMode('reg_pass');
-        } else if (inputMode === 'reg_pass') {
-            // Send Register
-            printLine('Password: ****', 'command');
-            socket.emit('register', { username: tempAuth.user, password: cleanCmd });
+        } 
+        else if (inputMode === 'reg_pass') {
+            setOutput(prev => [...prev, { text: `Password: ****`, type: 'command' }]);
+            if (socket) socket.emit('register', { username: tempAuth.user, password: cleanCmd });
             setInputMode('command');
         }
         setInput('');
         return;
     }
 
+    // --- NORMAL COMMAND MODE ---
     if (!cleanCmd) return;
     sfx('key');
 
@@ -136,44 +142,28 @@ function App() {
     const args = cleanCmd.split(' ');
     const command = args[0].toLowerCase();
 
-    // 1. LOCAL COMMANDS
+    // Local commands
     if (command === 'clear') { setOutput([]); setInput(''); return; }
     if (command === 'logout') { localStorage.removeItem('oddztek_token'); window.location.reload(); return; }
 
-    // --- TRIGGER INTERACTIVE LOGIN ---
-    if (command === 'login') {
-        if (args[1]) {
-            // Old way still works: login user pass
-            if (args[2]) socket.emit('login', { username: args[1], password: args[2] });
-            else printLine('Usage: login [user] [pass]', 'error');
-        } else {
-            // Start Interactive Mode
-            printLine('Username:', 'info');
-            setInputMode('login_user');
-        }
+    // Start Interactive Flows
+    if (command === 'login' && args.length === 1) {
+        setInputMode('login_user');
+        setInput('');
+        return;
+    }
+    if (command === 'register' && args.length === 1) {
+        setInputMode('reg_user');
         setInput('');
         return;
     }
 
-    if (command === 'register') {
-        if (args[1]) {
-            if (args[2]) socket.emit('register', { username: args[1], password: args[2], referralCode: args[3] });
-            else printLine('Usage: register [user] [pass] [code?]', 'error');
-        } else {
-            printLine('New Username:', 'info');
-            setInputMode('reg_user');
-        }
-        setInput('');
-        return;
-    }
-
-    // 2. SERVER COMMANDS
     if (!socket || !connected) {
-      printLine("ERROR: System Offline. Please wait...", "error");
+      printLine("ERROR: System Offline.", "error");
       return;
     }
     
-    // Check local handler first
+    // Check Client Handler (Local logic)
     const clientResult = processClientCommand(cleanCmd, gameState);
     if (clientResult.handled) {
         if (clientResult.output) printLine(clientResult.output.text, clientResult.output.type);
@@ -181,6 +171,7 @@ function App() {
         return;
     }
     
+    // Send to Server
     socket.emit('cmd', { command: command, args: args.slice(1) });
     setInput('');
   };
@@ -193,6 +184,11 @@ function App() {
       </div>
     );
   }
+
+  // Determine current prompt text based on mode
+  let promptText = `${gameState.username || 'guest'}@oddztek:~$`;
+  if (inputMode === 'login_user' || inputMode === 'reg_user') promptText = 'Username:';
+  if (inputMode === 'login_pass' || inputMode === 'reg_pass') promptText = 'Password:';
 
   const inputStyle = {
     color: gameState.theme === 'matrix' ? '#0f0' : 
@@ -210,12 +206,10 @@ function App() {
           {output.map((line, i) => (
             <div key={i} className={`line ${line.type}`}>{line.text}</div>
           ))}
+          
           <div className="input-line">
-            <span className="prompt">
-                {inputMode === 'command' ? `${gameState.username || 'guest'}@oddztek:~$` : 
-                 (inputMode.includes('user') ? 'Username: ' : 'Password: ')}
-            </span>
-            <div className="input-wrapper" style={{ display: 'flex', width: '100%' }}>
+            <span className="prompt">{promptText}</span>
+            <div className="input-wrapper">
                 <input 
                   type={inputMode.includes('pass') ? "password" : "text"} 
                   value={input} 
