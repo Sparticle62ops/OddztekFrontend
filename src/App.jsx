@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { Analytics } from '@vercel/analytics/react';
+import { processClientCommand } from './utils/commandHandler'; // Import the new handler
+import MatrixRain from './components/MatrixRain';
 import './App.css';
 
 // --- CONFIGURATION ---
-// REPLACE THIS URL WITH YOUR RENDER BACKEND URL IF IT CHANGED
 const BACKEND_URL = "https://oddztekbackend.onrender.com"; 
 
 // --- SOUND ASSETS ---
@@ -16,42 +17,6 @@ const AUDIO = {
   coin: new Audio('https://www.soundjay.com/button/sounds/button-09.mp3'),
   boot: new Audio('https://www.soundjay.com/button/sounds/beep-01a.mp3'),
   hack: new Audio('https://www.soundjay.com/communication/sounds/data-transfer-96kbps.mp3') 
-};
-
-// --- MATRIX RAIN COMPONENT ---
-const MatrixRain = ({ active }) => {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    if (!active) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%^&*';
-    const fontSize = 16;
-    const columns = canvas.width / fontSize;
-    const drops = Array(Math.floor(columns)).fill(1);
-
-    const draw = () => {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#0F0';
-      ctx.font = `${fontSize}px monospace`;
-
-      for (let i = 0; i < drops.length; i++) {
-        const text = chars.charAt(Math.floor(Math.random() * chars.length));
-        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
-        drops[i]++;
-      }
-    };
-    const interval = setInterval(draw, 50);
-    return () => clearInterval(interval);
-  }, [active]);
-
-  return <canvas id="matrix-canvas" ref={canvasRef} style={{ display: active ? 'block' : 'none' }} />;
 };
 
 function App() {
@@ -85,7 +50,7 @@ function App() {
     setBooted(true);
     sfx('boot');
     setOutput([
-        { text: 'ODDZTEK KERNEL v10.2 [STABLE]', type: 'system' },
+        { text: 'ODDZTEK KERNEL v11.0 [MODULAR]', type: 'system' },
         { text: 'Initializing neural interface...', type: 'system' },
         { text: 'Type "help" for command list.', type: 'info' }
     ]);
@@ -133,7 +98,7 @@ function App() {
     setOutput(prev => [...prev, { text, type }]);
   };
 
-  // --- COMMAND PARSER ---
+  // --- COMMAND PARSER (New Modular Logic) ---
   const handleCommand = (cmd) => {
     const cleanCmd = cmd.trim();
     if (!cleanCmd) return;
@@ -145,81 +110,29 @@ function App() {
     const args = cleanCmd.split(' ');
     const command = args[0].toLowerCase();
 
-    // 1. LOCAL COMMANDS (Handled Client-Side)
-    if (command === 'clear') {
-        setOutput([]);
-        setInput('');
-        return;
-    }
-    
-    if (command === 'logout') {
-        localStorage.removeItem('oddztek_token');
-        window.location.reload();
-        return;
-    }
+    // 1. Check Local Commands first (from commandHandler.js)
+    const clientResult = processClientCommand(cleanCmd, gameState);
 
-    if (command === 'ping') {
-        const ms = Math.floor(Math.random() * 40 + 20); // Fake latency for feel
-        printLine(`Pong! Latency: ${ms}ms`, 'success');
-        setInput('');
-        return;
-    }
-
-    if (command === 'sandbox' || command === 'js') {
-        const code = args.slice(1).join(' ');
-        if (!code) {
-            printLine('Usage: sandbox [js_code]', 'error');
-        } else {
-            try {
-                // Basic eval for prototype (Safe-ish context)
-                // eslint-disable-next-line no-new-func
-                const result = new Function(`return (${code})`)();
-                printLine(`[JS]: ${result}`, 'success');
-            } catch (e) {
-                printLine(`[JS Error]: ${e.message}`, 'error');
-            }
+    if (clientResult.handled) {
+        if (clientResult.output) {
+            printLine(clientResult.output.text, clientResult.output.type);
+        }
+        if (clientResult.action === 'clear') setOutput([]);
+        if (clientResult.action === 'logout') {
+            localStorage.removeItem('oddztek_token');
+            window.location.reload();
         }
         setInput('');
-        return;
+        return; // Stop here if client handled it
     }
 
-    if (command === 'help') {
-        printLine(`
-[CORE]
-  register [u] [p] (code) | login [u] [p]
-  status | invite | logout | clear
-  theme [name]   - Switch Theme (green, amber, plasma, matrix)
-  ping           - Check latency
-  
-[ECONOMY]
-  mine | daily | shop | buy [id]
-  inv | leaderboard | transfer [u] [amt]
-  flip [heads/tails] [amt] - Coinflip Gamble
-  
-[HACKING]
-  scan [u] | hack [u] | guess [pin]
-  brute [u] (Requires Tool)
-  
-[COMMUNICATION]
-  chat [msg]     - Global Chat
-  mail check     - Read Inbox
-  mail send [u] [msg] - Send Message
-  mail read [id] - Mark message as read
-  
-[SYSTEM]
-  files | read [f] 
-  sandbox [code] - Run JavaScript (Beta)
-        `, 'info');
-        setInput('');
-        return;
-    }
-
-    // 2. SERVER COMMANDS
+    // 2. SERVER COMMANDS (Fallback)
     if (!socket || !connected) {
       printLine("ERROR: System Offline. Please wait...", "error");
       return;
     }
     
+    // Send to backend
     socket.emit('cmd', { command: command, args: args.slice(1) });
     setInput('');
   };
@@ -233,7 +146,7 @@ function App() {
     );
   }
 
-  // Define input style directly based on theme to fix white text issue
+  // Force input style inheritance
   const inputStyle = {
     color: gameState.theme === 'matrix' ? '#0f0' : 
            gameState.theme === 'amber' ? '#fb0' :
@@ -255,7 +168,7 @@ function App() {
             <input 
               type="text" 
               value={input} 
-              style={inputStyle} /* FORCE COLOR STYLE */
+              style={inputStyle}
               onChange={(e) => setInput(e.target.value)} 
               onKeyDown={(e) => e.key === 'Enter' && handleCommand(input)} 
               autoFocus 
