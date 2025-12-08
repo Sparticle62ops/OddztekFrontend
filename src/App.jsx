@@ -24,8 +24,8 @@ function App() {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   
-  // --- INTERACTIVE MODE STATE ---
-  const [inputMode, setInputMode] = useState('command'); // 'command', 'login_user', 'login_pass', 'reg_user', 'reg_pass'
+  // State for interactive commands (Login/Register)
+  const [inputMode, setInputMode] = useState('command'); // command, login_user, login_pass, reg_user, reg_pass
   const [tempAuth, setTempAuth] = useState({ user: '', pass: '' });
   
   const [gameState, setGameState] = useState({
@@ -54,7 +54,7 @@ function App() {
     setBooted(true);
     sfx('boot');
     setOutput([
-        { text: 'ODDZTEK KERNEL v11.2 [PATCHED]', type: 'system' },
+        { text: 'ODDZTEK KERNEL v11.3 [STABLE]', type: 'system' },
         { text: 'Initializing neural interface...', type: 'system' },
         { text: 'Type "help" for command list.', type: 'info' }
     ]);
@@ -96,26 +96,21 @@ function App() {
   };
 
   const handleCommand = (cmd) => {
-    const cleanCmd = cmd.trim(); // Do not prevent empty input if just pressing enter to skip
+    const cleanCmd = cmd.trim(); // Allow empty if just pressing Enter to skip, but usually block
 
-    // --- INTERACTIVE MODE LOGIC (The Fix) ---
+    // --- INTERACTIVE MODE LOGIC ---
     if (inputMode !== 'command') {
-        if (!cleanCmd) return; // Ignore empty enters in auth
+        if (!cleanCmd) return; // Wait for actual input
 
         if (inputMode === 'login_user') {
             setTempAuth(prev => ({ ...prev, user: cleanCmd }));
-            // Echo the username typed (as a command line)
             setOutput(prev => [...prev, { text: `Username: ${cleanCmd}`, type: 'command' }]);
-            // Prompt for password
-            // Don't print "Password:" yet, let the prompt in input-line handle it visually
             setInputMode('login_pass');
         } 
         else if (inputMode === 'login_pass') {
-            // Echo masked password
+            // Masked password echo
             setOutput(prev => [...prev, { text: `Password: ****`, type: 'command' }]);
-            // Execute Login
             if (socket) socket.emit('login', { username: tempAuth.user, password: cleanCmd });
-            // Reset mode
             setInputMode('command');
         } 
         else if (inputMode === 'reg_user') {
@@ -132,7 +127,7 @@ function App() {
         return;
     }
 
-    // --- NORMAL COMMAND MODE ---
+    // --- STANDARD COMMAND MODE ---
     if (!cleanCmd) return;
     sfx('key');
 
@@ -185,7 +180,7 @@ function App() {
     );
   }
 
-  // Determine current prompt text based on mode
+  // Determine prompt text
   let promptText = `${gameState.username || 'guest'}@oddztek:~$`;
   if (inputMode === 'login_user' || inputMode === 'reg_user') promptText = 'Username:';
   if (inputMode === 'login_pass' || inputMode === 'reg_pass') promptText = 'Password:';
@@ -209,7 +204,8 @@ function App() {
           
           <div className="input-line">
             <span className="prompt">{promptText}</span>
-            <div className="input-wrapper" style={{ display: 'flex', width: '100%' }}>
+            {/* CLEANED UP INPUT WRAPPER */}
+            <div className="input-wrapper" style={{ flexGrow: 1, display: 'flex' }}>
                 <input 
                   type={inputMode.includes('pass') ? "password" : "text"} 
                   value={input} 
