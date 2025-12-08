@@ -209,7 +209,7 @@ function App() {
           
           <div className="input-line">
             <span className="prompt">{promptText}</span>
-            <div className="input-wrapper">
+            <div className="input-wrapper" style={{ display: 'flex', width: '100%' }}>
                 <input 
                   type={inputMode.includes('pass') ? "password" : "text"} 
                   value={input} 
@@ -219,7 +219,6 @@ function App() {
                   autoFocus 
                   autoComplete="off"
                 />
-                <span className="blinking-cursor">_</span>
             </div>
           </div>
           <div ref={bottomRef} />
