@@ -90,7 +90,6 @@ body {
   display: flex; 
   align-items: center; 
   margin-top: 15px; 
-  position: relative; /* For cursor positioning if needed */
 }
 
 .prompt { 
@@ -99,12 +98,13 @@ body {
   white-space: nowrap; 
 }
 
-/* --- CUSTOM BLINKING CURSOR SETUP --- */
 .input-wrapper {
   display: flex;
   align-items: center;
   flex-grow: 1;
   position: relative;
+  /* This ensures the cursor stays with the text */
+  width: auto; 
 }
 
 input {
@@ -115,9 +115,11 @@ input {
   font-size: inherit;
   color: inherit;
   text-shadow: inherit;
-  /* We hide the default caret above in theme styles */
-  flex-grow: 1;
-  width: 100%;
+  caret-color: transparent; /* Hide native cursor */
+  
+  /* Critical: Width should fit content or be handled carefully */
+  /* For a fake cursor at the end, we need a different approach or simple width: 100% */
+  width: 100%; 
   padding: 0;
   margin: 0;
 }
@@ -127,9 +129,14 @@ input {
   display: inline-block;
   width: 10px;
   height: 1.2em;
-  margin-left: 2px;
+  margin-left: 0px; /* Tweak this */
   animation: blink 1s step-end infinite;
-  vertical-align: text-bottom;
+  
+  /* Force it to sit at the end? Hard with just CSS on an input */
+  /* Actually, putting it next to width:100% input pushes it to far right */
+  /* To fix: Make input width dynamic or overlay cursor */
+  position: absolute; /* Try this if we calculate width, otherwise let it float */
+  right: 0; /* Temporary fix: puts cursor at end of line if input is full width */
 }
 
 /* --- VISUALS --- */
