@@ -7,7 +7,7 @@ const Spinner = ({ text = "Processing" }) => {
   useEffect(() => {
     const interval = setInterval(() => {
       setFrameIndex((prev) => (prev + 1) % frames.length);
-    }, 100); // Speed of rotation
+    }, 100);
     return () => clearInterval(interval);
   }, []);
 
