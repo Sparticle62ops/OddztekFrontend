@@ -19,7 +19,6 @@ export const processClientCommand = (cmdString, gameState) => {
       return { handled: true, action: 'logout' };
 
     case 'ping':
-      // Simulated latency for immersion
       const ms = Math.floor(Math.random() * 40 + 20);
       return { 
         handled: true, 
@@ -36,7 +35,6 @@ export const processClientCommand = (cmdString, gameState) => {
         };
       }
       try {
-        // Safe-ish eval for game flavor
         // eslint-disable-next-line no-new-func
         const result = new Function(`return (${code})`)();
         return { 
@@ -64,7 +62,7 @@ export const processClientCommand = (cmdString, gameState) => {
   theme [name]            : UI Color (green, amber, plasma, matrix)
   ping                    : Network Diagnostic
 
-[ECONOMY]
+[ECONOMY & GAMBLING]
   mine                    : Data Mining (20s Cycle)
   daily                   : Loyalty Reward (24h)
   shop | buy [id]         : Black Market
@@ -81,8 +79,11 @@ export const processClientCommand = (cmdString, gameState) => {
   guess [pin]             : Decrypt PIN
   brute [target]          : Auto-Cracker (Requires Tool)
 
-[MISSIONS]
+[MISSIONS & CONTRACTS]
+  jobs                    : List Available Contracts (NEW)
+  accept [id]             : Accept Contract Mission
   server_hack             : Raid Oddztek Mainframe
+  maze                    : Enter Procedural Maze
   nav [n/s/e/w]           : Navigate Virtual Space
 
 [COMMUNICATION]
@@ -98,7 +99,6 @@ export const processClientCommand = (cmdString, gameState) => {
       };
 
     default:
-      // If not handled here, return false so App.jsx sends it to the server
       return { handled: false };
   }
 };
