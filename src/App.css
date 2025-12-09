@@ -166,6 +166,12 @@ input {
 }
 .status-connected { color: #0f0; border: 1px solid #0f0; background: rgba(0,20,0,0.8); }
 .status-disconnected { color: #f00; border: 1px solid #f00; background: rgba(20,0,0,0.9); animation: blink 1s infinite; }
+/* --- Spinner --- */
+.spinner {
+  color: #00ffff; /* Cyan usually looks good for system processes */
+  font-weight: bold;
+  animation: pulse 1s infinite;
+}
 
 /* --- BOOT SCREEN --- */
 .boot-screen {
