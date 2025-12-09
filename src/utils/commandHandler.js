@@ -72,6 +72,8 @@ export const processClientCommand = (cmdString, gameState) => {
   leaderboard             : Top Hackers
   transfer [u] [amt]      : Fund Transfer
   flip [h/t] [amt]        : Coinflip Wager
+  dice [1-6] [amt]        : Dice Roll (5x Payout)
+  slots [amt]             : Slot Machine
 
 [HACKING & COMBAT]
   scan [target]           : Security Recon
