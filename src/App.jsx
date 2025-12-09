@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import { Analytics } from '@vercel/analytics/react';
 import { processClientCommand } from './utils/commandHandler';
 import MatrixRain from './components/MatrixRain';
-import Spinner from './components/Spinner';
+import Spinner from './components/Spinner'; // Ensure you have this component!
 import './App.css';
 
 // --- CONFIGURATION ---
@@ -25,8 +25,8 @@ function App() {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   
-  // State for interactive commands (Login/Register)
-  const [inputMode, setInputMode] = useState('command'); // command, login_user, login_pass, reg_user, reg_pass
+  // State for interactive commands
+  const [inputMode, setInputMode] = useState('command'); 
   const [tempAuth, setTempAuth] = useState({ user: '', pass: '' });
   
   const [gameState, setGameState] = useState({
@@ -55,7 +55,7 @@ function App() {
     setBooted(true);
     sfx('boot');
     setOutput([
-        { text: 'ODDZTEK KERNEL v11.3 [STABLE]', type: 'system' },
+        { text: 'ODDZTEK KERNEL v13.0 [ENTERPRISE]', type: 'system' },
         { text: 'Initializing neural interface...', type: 'system' },
         { text: 'Type "help" for command list.', type: 'info' }
     ]);
@@ -78,10 +78,19 @@ function App() {
     });
     
     newSocket.on('message', (msg) => {
-      printLine(msg.text, msg.type);
+      // Handle special loading type or art type here if needed
+      // For now, we assume Spinner handles 'loading' type in map
+      if (msg.text) { // Safety check
+          // If message is art, append a special flag? 
+          // Currently backend sends type='art' or 'loading'
+          setOutput(prev => [...prev, { text: msg.text, type: msg.type }]);
+      }
+      
       if (msg.type === 'error') sfx('error');
       if (msg.type === 'special') sfx('hack');
     });
+    
+    newSocket.on('play_sound', (name) => sfx(name));
     
     newSocket.on('player_data', (data) => {
       setGameState(prev => ({ ...prev, ...data }));
@@ -97,9 +106,9 @@ function App() {
   };
 
   const handleCommand = (cmd) => {
-    const cleanCmd = cmd.trim(); // Allow empty if just pressing Enter to skip, but usually block
+    const cleanCmd = cmd.trim(); 
 
-   // --- INTERACTIVE MODE LOGIC (FIXED) ---
+    // --- INTERACTIVE MODE LOGIC ---
     if (inputMode !== 'command') {
         if (!cleanCmd) return; 
 
@@ -110,13 +119,7 @@ function App() {
         } 
         else if (inputMode === 'login_pass') {
             setOutput(prev => [...prev, { text: `Password: ****`, type: 'command' }]);
-            
-            // FIX: Send as 'cmd' event to match backend v10+
-            if (socket) socket.emit('cmd', { 
-                command: 'login', 
-                args: [tempAuth.user, cleanCmd] 
-            });
-            
+            if (socket) socket.emit('cmd', { command: 'login', args: [tempAuth.user, cleanCmd] });
             setInputMode('command');
         } 
         else if (inputMode === 'reg_user') {
@@ -126,18 +129,13 @@ function App() {
         } 
         else if (inputMode === 'reg_pass') {
             setOutput(prev => [...prev, { text: `Password: ****`, type: 'command' }]);
-            
-            // FIX: Send as 'cmd' event
-            if (socket) socket.emit('cmd', { 
-                command: 'register', 
-                args: [tempAuth.user, cleanCmd] 
-            });
-            
+            if (socket) socket.emit('cmd', { command: 'register', args: [tempAuth.user, cleanCmd] });
             setInputMode('command');
         }
         setInput('');
         return;
     }
+
     // --- STANDARD COMMAND MODE ---
     if (!cleanCmd) return;
     sfx('key');
@@ -148,11 +146,20 @@ function App() {
     const args = cleanCmd.split(' ');
     const command = args[0].toLowerCase();
 
-    // Local commands
-    if (command === 'clear') { setOutput([]); setInput(''); return; }
-    if (command === 'logout') { localStorage.removeItem('oddztek_token'); window.location.reload(); return; }
+    // Client Logic
+    const clientResult = processClientCommand(cleanCmd, gameState);
+    if (clientResult.handled) {
+        if (clientResult.output) printLine(clientResult.output.text, clientResult.output.type);
+        if (clientResult.action === 'clear') setOutput([]);
+        if (clientResult.action === 'logout') {
+            localStorage.removeItem('oddztek_token');
+            window.location.reload();
+        }
+        setInput('');
+        return;
+    }
 
-    // Start Interactive Flows
+    // Interactive Triggers
     if (command === 'login' && args.length === 1) {
         setInputMode('login_user');
         setInput('');
@@ -164,20 +171,12 @@ function App() {
         return;
     }
 
+    // Server Logic
     if (!socket || !connected) {
       printLine("ERROR: System Offline.", "error");
       return;
     }
     
-    // Check Client Handler (Local logic)
-    const clientResult = processClientCommand(cleanCmd, gameState);
-    if (clientResult.handled) {
-        if (clientResult.output) printLine(clientResult.output.text, clientResult.output.type);
-        setInput('');
-        return;
-    }
-    
-    // Send to Server
     socket.emit('cmd', { command: command, args: args.slice(1) });
     setInput('');
   };
@@ -191,7 +190,6 @@ function App() {
     );
   }
 
-  // Determine prompt text
   let promptText = `${gameState.username || 'guest'}@oddztek:~$`;
   if (inputMode === 'login_user' || inputMode === 'reg_user') promptText = 'Username:';
   if (inputMode === 'login_pass' || inputMode === 'reg_pass') promptText = 'Password:';
@@ -206,29 +204,36 @@ function App() {
     <>
       <MatrixRain active={gameState.theme === 'matrix'} />
       <div className={`terminal-container theme-${gameState.theme || 'green'}`} onClick={() => document.querySelector('input')?.focus()}>
-        <div className={connected ? "status-light on" : "status-light off"} />
+        
+        {/* --- STATUS HUD --- */}
+        <div className="hud-container">
+            <div className={connected ? "status-light on" : "status-light off"} title={connected ? "Online" : "Offline"} />
+            {connected && gameState.username !== 'guest' && (
+                <div className="balance-display">
+                    {gameState.balance} ODZ
+                </div>
+            )}
+        </div>
+
         <div className="scanline"></div>
         <div className="terminal-content">
           {output.map((line, i) => (
-  <div key={i} className={`line ${line.type}`}>
-    {line.type === 'loading' ? <Spinner text={line.text} /> : line.text}
-  </div>
-))}
+             <div key={i} className={`line ${line.type} ${line.type === 'art' ? 'art' : ''}`}>
+                {line.type === 'loading' ? <Spinner text={line.text} /> : line.text}
+             </div>
+          ))}
           
           <div className="input-line">
             <span className="prompt">{promptText}</span>
-            {/* CLEANED UP INPUT WRAPPER */}
-            <div className="input-wrapper" style={{ flexGrow: 1, display: 'flex' }}>
-                <input 
-                  type={inputMode.includes('pass') ? "password" : "text"} 
-                  value={input} 
-                  style={inputStyle}
-                  onChange={(e) => setInput(e.target.value)} 
-                  onKeyDown={(e) => e.key === 'Enter' && handleCommand(input)} 
-                  autoFocus 
-                  autoComplete="off"
-                />
-            </div>
+            <input 
+              type={inputMode.includes('pass') ? "password" : "text"} 
+              value={input} 
+              style={inputStyle}
+              onChange={(e) => setInput(e.target.value)} 
+              onKeyDown={(e) => e.key === 'Enter' && handleCommand(input)} 
+              autoFocus 
+              autoComplete="off"
+            />
           </div>
           <div ref={bottomRef} />
         </div>
