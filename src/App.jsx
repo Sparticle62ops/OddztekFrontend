@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 import { Analytics } from '@vercel/analytics/react';
 import { processClientCommand } from './utils/commandHandler';
 import MatrixRain from './components/MatrixRain';
+import Spinner from './components/Spinner';
 import './App.css';
 
 // --- CONFIGURATION ---
@@ -209,8 +210,10 @@ function App() {
         <div className="scanline"></div>
         <div className="terminal-content">
           {output.map((line, i) => (
-            <div key={i} className={`line ${line.type}`}>{line.text}</div>
-          ))}
+  <div key={i} className={`line ${line.type}`}>
+    {line.type === 'loading' ? <Spinner text={line.text} /> : line.text}
+  </div>
+))}
           
           <div className="input-line">
             <span className="prompt">{promptText}</span>
