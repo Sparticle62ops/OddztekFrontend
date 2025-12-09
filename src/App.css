@@ -1,7 +1,9 @@
+/* src/App.css */
+
 /* --- FONTS --- */
 @import url('https://fonts.googleapis.com/css2?family=VT323&family=Fira+Code:wght@400;700&display=swap');
 
-/* --- BASE --- */
+/* --- BASE LAYOUT --- */
 body {
   margin: 0;
   padding: 0;
@@ -12,143 +14,150 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* --- MAIN CONTAINER --- */
-.terminal-container {
+#root {
+  display: flex;
   height: 100vh;
   width: 100vw;
+}
+
+/* --- LEFT SIDE: TERMINAL --- */
+.terminal-container {
+  flex: 7; /* Takes 70% width */
+  height: 100%;
   padding: 20px;
   box-sizing: border-box;
   overflow-y: auto;
   position: relative;
-  z-index: 2; /* Sit ABOVE matrix canvas */
-  font-size: 1rem;
-  line-height: 1.4;
+  z-index: 2;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.6); /* Slightly darker for contrast */
 }
 
-/* --- THEMES --- */
-
-/* 1. GREEN (Classic) */
-.theme-green {
-  background-color: #050a05;
-  color: #00ff00;
-  text-shadow: 0 0 3px #00cc00;
+/* --- RIGHT SIDE: DASHBOARD --- */
+.dashboard-container {
+  flex: 3; /* Takes 30% width */
+  height: 100%;
+  background: rgba(5, 10, 5, 0.95);
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  z-index: 3;
+  box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+  overflow-y: auto;
 }
-.theme-green input { color: #00ff00; caret-color: transparent; } /* Hide default caret for custom one */
-.theme-green .blinking-cursor { background-color: #00ff00; }
 
-/* 2. AMBER (Retro) */
-.theme-amber {
-  background-color: #120d00;
-  color: #ffb000;
-  text-shadow: 0 0 3px #cc8800;
+/* Hide Dashboard on Mobile */
+@media (max-width: 800px) {
+  .dashboard-container { display: none; }
+  .terminal-container { flex: 1; border-right: none; }
 }
-.theme-amber input { color: #ffb000; caret-color: transparent; }
-.theme-amber .blinking-cursor { background-color: #ffb000; }
 
-/* 3. PLASMA (Neon) */
-.theme-plasma {
-  background-color: #080014;
-  color: #d000ff;
-  text-shadow: 0 0 4px #d000ff;
+/* --- DASHBOARD WIDGETS --- */
+.widget {
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  background: rgba(0, 20, 0, 0.4);
+  padding: 15px;
+  border-radius: 4px;
 }
-.theme-plasma .prompt { color: #00ffff; text-shadow: 0 0 4px #00ffff; }
-.theme-plasma input { color: #00ffff; caret-color: transparent; }
-.theme-plasma .line.success { color: #00ffff !important; }
-.theme-plasma .blinking-cursor { background-color: #00ffff; }
 
-/* 4. MATRIX (Hacker Mode) */
-.theme-matrix {
-  /* Semi-transparent to see rain */
-  background-color: rgba(0, 0, 0, 0.85); 
-  color: #00ff00;
-  font-family: 'VT323', monospace;
-  font-size: 1.4rem;
-  text-shadow: 0 0 2px #00ff00;
+.widget h3 {
+  margin: 0 0 12px 0;
+  border-bottom: 1px dashed rgba(0, 255, 0, 0.3);
+  padding-bottom: 5px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: #0f0; /* Default green, overridden by theme */
+  letter-spacing: 2px;
 }
-.theme-matrix input { color: #fff; caret-color: transparent; font-weight: bold; }
-.theme-matrix .line.special { background: #002200; color: #fff !important; }
-.theme-matrix .blinking-cursor { background-color: #00ff00; }
 
-/* --- TEXT STYLES --- */
-.line { margin-bottom: 4px; white-space: pre-wrap; word-wrap: break-word; }
-.line.command { opacity: 0.6; margin-top: 8px; font-weight: bold; }
+/* Stat Rows */
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  color: #ccc;
+}
+.stat-val { font-weight: bold; color: #fff; }
+
+/* Progress Bars */
+.bar-container {
+  width: 100%;
+  height: 6px;
+  background: #333;
+  margin-bottom: 12px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: #0f0; /* Default */
+  width: 0%;
+  transition: width 0.5s ease-out;
+  box-shadow: 0 0 5px currentColor;
+}
+
+/* --- THEME OVERRIDES FOR DASHBOARD --- */
+/* Green */
+.theme-green .widget { border-color: rgba(0, 255, 0, 0.3); }
+.theme-green h3 { color: #0f0; }
+.theme-green .bar-fill { background: #0f0; }
+
+/* Amber */
+.theme-amber .widget { border-color: rgba(255, 176, 0, 0.3); background: rgba(20, 10, 0, 0.4); }
+.theme-amber h3 { color: #ffb000; border-color: rgba(255, 176, 0, 0.3); }
+.theme-amber .bar-fill { background: #ffb000; }
+
+/* Plasma */
+.theme-plasma .widget { border-color: rgba(0, 229, 255, 0.3); background: rgba(10, 0, 20, 0.4); }
+.theme-plasma h3 { color: #00e5ff; border-color: rgba(208, 0, 255, 0.3); }
+.theme-plasma .bar-fill { background: #d000ff; }
+
+/* Matrix */
+.theme-matrix .widget { border: 1px solid #0f0; background: #000; }
+.theme-matrix h3 { color: #0f0; border-bottom: 1px solid #0f0; }
+.theme-matrix .bar-fill { background: #0f0; }
+
+/* --- TERMINAL TEXT STYLES --- */
+.line { margin-bottom: 4px; white-space: pre-wrap; word-wrap: break-word; line-height: 1.4; }
+.line.command { opacity: 0.6; font-weight: bold; margin-top: 10px; }
 .line.system { opacity: 0.8; font-style: italic; }
-.line.error { color: #ff3333 !important; text-shadow: none !important; font-weight: bold; }
+.line.error { color: #ff4444 !important; text-shadow: none !important; font-weight: bold; }
 .line.success { color: #00ffff !important; font-weight: bold; text-shadow: 0 0 5px #00ffff; }
 .line.warning { color: #ffaa00 !important; font-weight: bold; }
-.line.info { opacity: 0.9; color: #ddd; margin-bottom: 10px; }
+.line.info { opacity: 0.9; color: #ddd; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 5px; margin-bottom: 10px; }
 .line.special { 
   color: #ffff00 !important; 
   text-shadow: 0 0 8px #ffff00; 
   font-weight: bold; 
   border-left: 3px solid #ffff00;
   padding-left: 10px;
+  animation: pulse 2s infinite; 
 }
 
-/* --- INPUT AREA FIX --- */
-.input-line { 
-  display: flex;       /* Use Flexbox */
-  flex-direction: row; /* Force row direction */
-  align-items: center; 
-  margin-top: 15px;
-  width: 100%;         /* Take full width */
-}
-
-.prompt { 
-  margin-right: 12px; 
-  font-weight: bold; 
-  white-space: nowrap; /* Prevent prompt from wrapping */
-  flex-shrink: 0;      /* Prevent prompt from shrinking */
-}
+/* --- INPUT AREA --- */
+.input-line { display: flex; flex-direction: row; align-items: center; margin-top: 15px; width: 100%; }
+.prompt { margin-right: 12px; font-weight: bold; white-space: nowrap; flex-shrink: 0; }
 
 input {
   background: transparent;
   border: none;
   outline: none;
-  
-  /* Font Inheritance */
   font-family: inherit;
   font-size: inherit;
   color: inherit;
   text-shadow: inherit;
-  
-  /* Caret Visibility */
-  caret-color: auto; /* Let browser decide color based on text color */
-  
-  flex-grow: 1;    /* Take remaining space */
-  min-width: 0;    /* Allow shrinking if needed */
+  caret-color: auto;
+  flex-grow: 1;
+  min-width: 0;
   padding: 0;
   margin: 0;
-  display: block;  /* Fix inline quirks */
-}
-
-/* Specific Caret Colors per Theme */
-.theme-green input { caret-color: #00ff00; }
-.theme-amber input { caret-color: #ffb000; }
-.theme-plasma input { caret-color: #00ffff; }
-.theme-matrix input { caret-color: #00ff00; }
-
-/* The Cursor Element */
-.blinking-cursor {
-  display: inline-block;
-  width: 10px;
-  height: 1.2em;
-  margin-left: 0px; /* Tweak this */
-  animation: blink 1s step-end infinite;
-  
-  /* Force it to sit at the end? Hard with just CSS on an input */
-  /* Actually, putting it next to width:100% input pushes it to far right */
-  /* To fix: Make input width dynamic or overlay cursor */
-  position: absolute; /* Try this if we calculate width, otherwise let it float */
-  right: 0; /* Temporary fix: puts cursor at end of line if input is full width */
 }
 
 /* --- VISUALS --- */
-#matrix-canvas {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  z-index: 0; display: none; opacity: 0.4;
-}
-
+#matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; display: none; opacity: 0.4; }
 .scanline {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
@@ -157,62 +166,17 @@ input {
   pointer-events: none; z-index: 10;
 }
 
-/* --- HUD / STATUS AREA --- */
-.hud-container {
-  position: fixed;
-  top: 15px;
-  right: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  z-index: 100;
-  pointer-events: none; /* Let clicks pass through */
-}
-
-.status-light {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  margin-bottom: 8px;
-  transition: all 0.3s ease;
-}
-.status-light.on { background: #0f0; box-shadow: 0 0 8px #0f0; border: 1px solid #0a0; }
-.status-light.off { background: #f00; box-shadow: 0 0 8px #f00; border: 1px solid #a00; animation: blink 1s infinite; }
-
-.balance-display {
-  font-family: 'Fira Code', monospace;
-  font-weight: bold;
-  font-size: 1.1rem;
-  color: inherit; /* Inherit theme color */
-  text-shadow: 0 0 5px currentColor;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 4px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  letter-spacing: 1px;
-}
-
-/* --- Spinner --- */
-.spinner {
-  color: #00ffff; /* Cyan usually looks good for system processes */
-  font-weight: bold;
-  animation: pulse 1s infinite;
-}
-
-/* --- BOOT SCREEN --- */
+/* Boot Screen */
 .boot-screen {
-  display: flex; flex-direction: column;
-  justify-content: center; align-items: center;
-  height: 100vh; width: 100vw;
-  background: #000; cursor: pointer;
-  z-index: 9999; font-family: 'Fira Code', monospace; color: #0f0;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  height: 100vh; width: 100vw; background: #000; cursor: pointer; z-index: 9999;
+  font-family: 'Fira Code', monospace; color: #0f0;
 }
 .boot-screen h1 { font-size: 3rem; text-shadow: 0 0 15px #0f0; margin-bottom: 20px; animation: pulse 3s infinite; }
 .boot-screen p { color: #0a0; font-size: 1rem; animation: blink 1.5s infinite; letter-spacing: 2px; }
 
-/* --- ANIMATIONS --- */
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 8px; }
