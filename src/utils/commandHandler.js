@@ -1,17 +1,11 @@
 // src/utils/commandHandler.js
 
-/**
- * Handles commands that can be processed entirely on the client side.
- * Returns an object with:
- * - handled: boolean (true if client processed it, false if server should)
- * - output: object (optional text/type to display)
- * - action: string (optional special action like 'clear' or 'logout')
- */
 export const processClientCommand = (cmdString, gameState) => {
   const args = cmdString.trim().split(' ');
   const command = args[0].toLowerCase();
 
   switch (command) {
+    // --- LOCAL UTILITIES ---
     case 'clear':
       return { handled: true, action: 'clear' };
 
@@ -48,6 +42,7 @@ export const processClientCommand = (cmdString, gameState) => {
         };
       }
 
+    // --- HELP MENU ---
     case 'help':
       return {
         handled: true,
@@ -62,29 +57,33 @@ export const processClientCommand = (cmdString, gameState) => {
   theme [name]            : UI Color (green, amber, plasma, matrix)
   ping                    : Network Diagnostic
 
-[ECONOMY & GAMBLING]
+[ECONOMY]
   mine                    : Data Mining (20s Cycle)
   daily                   : Loyalty Reward (24h)
   shop | buy [id]         : Black Market
   inventory | inv         : View Modules
   leaderboard             : Top Hackers
   transfer [u] [amt]      : Fund Transfer
+
+[ACTIVITIES & GAMBLING]
   flip [h/t] [amt]        : Coinflip Wager
   dice [1-6] [amt]        : Dice Roll (5x Payout)
   slots [amt]             : Slot Machine
 
-[HACKING & COMBAT]
-  scan [target]           : Security Recon
-  hack [target]           : Breach Protocol (30s)
+[HACKING OPERATIONS]
+  scan [target]           : Recon target security level
+  exploit [port]          : Breach specific port (NEW)
+  privesc                 : Attempt Root Access (NEW)
+  hack [target]           : Legacy Breach Protocol
   guess [pin]             : Decrypt PIN
   brute [target]          : Auto-Cracker (Requires Tool)
 
 [MISSIONS & CONTRACTS]
-  jobs                    : List Available Contracts (NEW)
-  accept [id]             : Accept Contract Mission
+  jobs                    : List Available Contracts
+  accept [id]             : Accept Contract
   server_hack             : Raid Oddztek Mainframe
-  maze                    : Enter Procedural Maze
   nav [n/s/e/w]           : Navigate Virtual Space
+  download                : Extract Mission Data
 
 [COMMUNICATION]
   chat [msg]              : Global encrypted channel
@@ -92,13 +91,15 @@ export const processClientCommand = (cmdString, gameState) => {
   mail send [u] [msg]     : Send Encrypted Mail
 
 [SYSTEM]
-  files | read [f]        : File System Access
+  files | ls              : List System Directory
+  read | cat [f]          : Decrypt/Display File
   sandbox [code]          : Local JS Environment
           `
         }
       };
 
     default:
+      // Pass through to Server
       return { handled: false };
   }
 };
