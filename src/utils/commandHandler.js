@@ -42,7 +42,7 @@ export const processClientCommand = (cmdString, gameState) => {
         };
       }
 
-    // --- HELP MENU ---
+    // --- HELP MENU (Updated for v16.0) ---
     case 'help':
       return {
         handled: true,
@@ -55,7 +55,6 @@ export const processClientCommand = (cmdString, gameState) => {
   status / whoami         : View Stats & Hardware
   logout | clear          : Session Management
   theme [name]            : UI Color (green, amber, plasma, matrix)
-  ping                    : Network Diagnostic
 
 [ECONOMY]
   mine                    : Data Mining (20s Cycle)
@@ -64,36 +63,40 @@ export const processClientCommand = (cmdString, gameState) => {
   inventory | inv         : View Modules
   leaderboard             : Top Hackers
   transfer [u] [amt]      : Fund Transfer
+  collect                 : Collect Passive Server Income
 
-[ACTIVITIES & GAMBLING]
+[BLACK MARKET]
+  virus list              : View Custom Malware
+  virus create [name]     : Compile new Virus (Costs 1000)
+  virus upgrade [n] [stat]: Upgrade Power/Stealth
+  bounty list             : View Most Wanted
+  bounty place [u] [amt]  : Set price on a player's head
+
+[HACKING OPERATIONS]
+  netscan                 : Scan network for Targets
+  scan [target]           : Recon specific target
+  exploit [port] [virus]  : Breach via Port (Optional Virus)
+  
+  -- INSIDE SHELL --
+  ls | cat [file]         : File Management
+  privesc                 : Attempt Root Access (GPU Rec.)
+  unlock [pin]            : Crack Wallet Encryption
+
+[ACTIVITIES]
   flip [h/t] [amt]        : Coinflip Wager
   dice [1-6] [amt]        : Dice Roll (5x Payout)
   slots [amt]             : Slot Machine
 
-[HACKING OPERATIONS]
-  scan [target]           : Recon target security level
-  exploit [port]          : Breach specific port (NEW)
-  privesc                 : Attempt Root Access (NEW)
-  hack [target]           : Legacy Breach Protocol
-  guess [pin]             : Decrypt PIN
-  brute [target]          : Auto-Cracker (Requires Tool)
-
-[MISSIONS & CONTRACTS]
-  jobs                    : List Available Contracts
-  accept [id]             : Accept Contract
-  server_hack             : Raid Oddztek Mainframe
-  nav [n/s/e/w]           : Navigate Virtual Space
-  download                : Extract Mission Data
+[MISSIONS]
+  jobs                    : List Contracts
+  accept [id]             : Start Mission
+  server_hack             : Start Heist (If active)
+  nav [n/s/e/w]           : Mission Movement
 
 [COMMUNICATION]
   chat [msg]              : Global encrypted channel
   mail check | read [id]  : Secure Inbox
   mail send [u] [msg]     : Send Encrypted Mail
-
-[SYSTEM]
-  files | ls              : List System Directory
-  read | cat [f]          : Decrypt/Display File
-  sandbox [code]          : Local JS Environment
           `
         }
       };
