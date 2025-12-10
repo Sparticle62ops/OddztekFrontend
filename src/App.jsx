@@ -27,7 +27,6 @@ function App() {
   const [inputMode, setInputMode] = useState('command'); 
   const [tempAuth, setTempAuth] = useState({ user: '', pass: '' });
   
-  // INITIAL STATE (Prevents "undefined" errors on dashboard)
   const [gameState, setGameState] = useState({
     username: 'guest',
     balance: 0,
@@ -35,7 +34,7 @@ function App() {
     level: 1,
     theme: 'green',
     hardware: { cpu: 1, gpu: 0, ram: 8, servers: 0 },
-    missionProgress: { active: null, stage: 0, targetName: 'None' },
+    missionProgress: {},
     inventory: []
   });
 
@@ -55,9 +54,9 @@ function App() {
     setBooted(true);
     sfx('boot');
     setOutput([
-        { text: 'ODDZTEK KERNEL v14.3 [TACTICAL UI]', type: 'system' },
-        { text: 'Initializing...', type: 'system' },
-        { text: 'Type "help" to begin.', type: 'info' }
+        { text: 'ODDZTEK KERNEL v15.0 [CORE]', type: 'system' },
+        { text: 'Initializing neural interface...', type: 'system' },
+        { text: 'Type "help" for command list.', type: 'info' }
     ]);
     
     if (!BACKEND_URL) return;
@@ -66,15 +65,15 @@ function App() {
 
     newSocket.on('connect', () => {
         setConnected(true);
-        printLine('UPLINK ESTABLISHED.', 'success');
+        printLine('Mainframe Uplink: SECURE', 'success');
         const savedToken = localStorage.getItem('oddztek_token');
         if (savedToken) newSocket.emit('auth_token', savedToken);
-        else printLine('Identity required. Type "login".', 'info');
+        else printLine('Login required. Type "login".', 'info');
     });
 
     newSocket.on('disconnect', () => {
         setConnected(false);
-        printLine('CONNECTION LOST.', 'error');
+        printLine('CONNECTION LOST. Retrying...', 'error');
     });
     
     newSocket.on('message', (msg) => {
@@ -84,14 +83,11 @@ function App() {
     });
     
     newSocket.on('player_data', (data) => {
-      // DEEP MERGE to prevent dashboard flickering or zeroing out
-      setGameState(prev => {
-          const newState = { ...prev, ...data };
-          // Ensure nested objects preserve previous state if data sends partial updates
-          if (data.hardware) newState.hardware = { ...prev.hardware, ...data.hardware };
-          if (data.missionProgress) newState.missionProgress = { ...prev.missionProgress, ...data.missionProgress };
-          return newState;
-      });
+      setGameState(prev => ({ 
+          ...prev, 
+          ...data,
+          hardware: data.hardware ? { ...prev.hardware, ...data.hardware } : prev.hardware
+      }));
       
       if (data.theme) document.body.className = `theme-${data.theme}`;
       if (data.token) localStorage.setItem('oddztek_token', data.token);
@@ -107,14 +103,15 @@ function App() {
   const handleCommand = (cmd) => {
     const cleanCmd = cmd.trim(); 
 
+    // --- INTERACTIVE MODE ---
     if (inputMode !== 'command') {
         if (!cleanCmd) return; 
         if (inputMode === 'login_user') {
             setTempAuth(prev => ({ ...prev, user: cleanCmd }));
-            setOutput(prev => [...prev, { text: `User: ${cleanCmd}`, type: 'command' }]);
+            setOutput(prev => [...prev, { text: `Username: ${cleanCmd}`, type: 'command' }]);
             setInputMode('login_pass');
         } else if (inputMode === 'login_pass') {
-            setOutput(prev => [...prev, { text: `Pass: ****`, type: 'command' }]);
+            setOutput(prev => [...prev, { text: `Password: ****`, type: 'command' }]);
             if (socket) socket.emit('cmd', { command: 'login', args: [tempAuth.user, cleanCmd] });
             setInputMode('command');
         } else if (inputMode === 'reg_user') {
@@ -122,7 +119,7 @@ function App() {
             setOutput(prev => [...prev, { text: `New User: ${cleanCmd}`, type: 'command' }]);
             setInputMode('reg_pass');
         } else if (inputMode === 'reg_pass') {
-            setOutput(prev => [...prev, { text: `Pass: ****`, type: 'command' }]);
+            setOutput(prev => [...prev, { text: `Password: ****`, type: 'command' }]);
             if (socket) socket.emit('cmd', { command: 'register', args: [tempAuth.user, cleanCmd] });
             setInputMode('command');
         }
@@ -139,6 +136,7 @@ function App() {
     const args = cleanCmd.split(' ');
     const command = args[0].toLowerCase();
 
+    // Client Logic
     const clientResult = processClientCommand(cleanCmd, gameState);
     if (clientResult.handled) {
         if (clientResult.output) printLine(clientResult.output.text, clientResult.output.type);
@@ -155,7 +153,7 @@ function App() {
     if (command === 'register') { setInputMode('reg_user'); setInput(''); return; }
 
     if (!socket || !connected) {
-      printLine("ERROR: Offline.", "error");
+      printLine("ERROR: System Offline.", "error");
       return;
     }
     
@@ -167,7 +165,7 @@ function App() {
     return (
       <div className="boot-screen" onClick={handleBoot}>
         <h1>ODDZTEK OS</h1>
-        <p>[ INITIALIZE ]</p>
+        <p>[ CLICK TO INITIALIZE SYSTEM ]</p>
       </div>
     );
   }
@@ -182,30 +180,24 @@ function App() {
            gameState.theme === 'plasma' ? '#0ff' : '#0f0'
   };
 
-  // Helper for bars with safety checks
-  const getWidth = (val, max) => {
-      const v = val || 0; 
-      return `${Math.min(100, (v / max) * 100)}%`;
-  };
-
   return (
     <div className={`app-layout theme-${gameState.theme || 'green'}`}>
       <MatrixRain active={gameState.theme === 'matrix'} />
       
-      {/* 1. HUD (Top Right Fixed) */}
+      {/* 1. HUD: Minimalist Top Right */}
       <div className="hud-container">
-          <div className="hud-row">
-            <span className={connected ? "led on" : "led off"}></span>
-            <span className="hud-label">{connected ? "ONLINE" : "OFFLINE"}</span>
+          <div className="status-indicator">
+              <span>NET: US-EAST</span>
+              <div className={connected ? "status-dot on" : "status-dot off"} />
           </div>
           {gameState.username !== 'guest' && (
-              <div className="hud-balance">
-                  {gameState.balance} <span style={{fontSize:'0.8em'}}>ODZ</span>
+              <div className="balance-display">
+                  {gameState.balance} ODZ
               </div>
           )}
       </div>
 
-      {/* 2. MAIN TERMINAL */}
+      {/* 2. FULL SCREEN TERMINAL */}
       <div className="terminal-container" onClick={() => document.querySelector('input')?.focus()}>
         <div className="scanline"></div>
         <div className="terminal-content">
@@ -214,6 +206,7 @@ function App() {
                 {line.type === 'loading' ? <Spinner text={line.text} /> : line.text}
              </div>
           ))}
+          
           <div className="input-line">
             <span className="prompt">{promptText}</span>
             <input 
@@ -229,53 +222,6 @@ function App() {
           <div ref={bottomRef} />
         </div>
       </div>
-
-      {/* 3. SIDE MOUNTED DASHBOARD */}
-      {gameState.username !== 'guest' && (
-        <div className="dashboard-container">
-            
-            <div className="db-header">/// SYSTEM MONITOR</div>
-
-            <div className="widget">
-                <div className="w-title">USER STATS</div>
-                <div className="stat-row"><span>IDENTITY</span> <span className="val">{gameState.username}</span></div>
-                <div className="stat-row"><span>CLEARANCE</span> <span className="val">LVL {gameState.level}</span></div>
-                <div className="stat-row"><span>XP</span> <span className="val">{gameState.xp}</span></div>
-            </div>
-
-            <div className="widget">
-                <div className="w-title">HARDWARE</div>
-                
-                <div className="stat-row"><span>CPU [MINE]</span> <span className="val">TYPE-v{gameState.hardware.cpu}</span></div>
-                <div className="bar-track"><div className="bar-fill" style={{ width: getWidth(gameState.hardware.cpu, 5) }}></div></div>
-
-                <div className="stat-row"><span>GPU [HASH]</span> <span className="val">CUDA-v{gameState.hardware.gpu}</span></div>
-                <div className="bar-track"><div className="bar-fill" style={{ width: getWidth(gameState.hardware.gpu, 3) }}></div></div>
-
-                <div className="stat-row"><span>RAM [BUF]</span> <span className="val">{gameState.hardware.ram} GB</span></div>
-                <div className="bar-track"><div className="bar-fill" style={{ width: getWidth(gameState.hardware.ram, 32) }}></div></div>
-            </div>
-
-            <div className="widget">
-                <div className="w-title">SERVER FARM</div>
-                <div className="stat-row"><span>NODES</span> <span className="val">{gameState.hardware.servers} UNITS</span></div>
-                <div className="stat-row"><span>OUTPUT</span> <span className="val">{gameState.hardware.servers * 10} ODZ/m</span></div>
-                <div style={{fontSize:'0.7rem', color:'#666', marginTop:'5px', textAlign:'center'}}>
-                    {gameState.hardware.servers > 0 ? ">> MINING NETWORK ACTIVE <<" : "OFFLINE"}
-                </div>
-            </div>
-
-            {gameState.missionProgress && gameState.missionProgress.active && (
-                <div className="widget active-mission">
-                    <div className="w-title blink">ACTIVE OPERATION</div>
-                    <div className="stat-row"><span>OP</span> <span className="val text-bright">{gameState.missionProgress.active.toUpperCase()}</span></div>
-                    <div className="stat-row"><span>TARGET</span> <span className="val">{gameState.missionProgress.targetName || 'Unknown'}</span></div>
-                    <div className="stat-row"><span>STAGE</span> <span className="val">{gameState.missionProgress.stage}/4</span></div>
-                </div>
-            )}
-
-        </div>
-      )}
     </div>
   );
 }
