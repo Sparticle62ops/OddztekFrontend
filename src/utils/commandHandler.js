@@ -70,6 +70,9 @@ export const processClientCommand = (cmdString, gameState) => {
   transfer [user] [amt]   : Send funds
   collect                 : Harvest passive server income
   daily                   : Claim loyalty reward
+  bank deposit [amt]      : Secure funds in vault
+  bank withdraw [amt]     : Access vault funds
+  combine [item]          : Craft upgraded software
 
 [OFFENSIVE OPERATIONS]
   netscan                 : Scan local subnet for targets

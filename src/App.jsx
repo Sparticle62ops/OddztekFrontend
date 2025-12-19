@@ -196,6 +196,13 @@ function App() {
                   {gameState.balance} ODZ
               </div>
           )}
+          
+          {gameState.username !== 'guest' && gameState.missionProgress?.active && (
+              <div className="mission-widget">
+                  <div>MISSION: {gameState.missionProgress.type?.toUpperCase() || 'UNKNOWN'}</div>
+                  <div style={{fontSize: '0.8em', opacity: 0.8}}>TARGET: {gameState.missionProgress.target}</div>
+              </div>
+          )}
       </div>
 
       {/* 2. FULL SCREEN TERMINAL */}
