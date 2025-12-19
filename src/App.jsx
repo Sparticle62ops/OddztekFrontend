@@ -54,9 +54,10 @@ function App() {
     setBooted(true);
     sfx('boot');
     setOutput([
-        { text: 'ODDZTEK KERNEL v15.0 [CORE]', type: 'system' },
-        { text: 'Initializing neural interface...', type: 'system' },
-        { text: 'Type "help" for command list.', type: 'info' }
+        { text: 'ODDZTEK OS v17.0 [REMASTERED]', type: 'system' },
+        { text: 'Initializing secure neural uplink...', type: 'system' },
+        { text: 'Connection established. Welcome, Operator.', type: 'success' },
+        { text: 'Type "help" to access system manual.', type: 'info' }
     ]);
     
     if (!BACKEND_URL) return;

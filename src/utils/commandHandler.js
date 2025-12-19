@@ -7,9 +7,11 @@ export const processClientCommand = (cmdString, gameState) => {
   switch (command) {
     // --- LOCAL UTILITIES ---
     case 'clear':
+    case 'cls':
       return { handled: true, action: 'clear' };
 
     case 'logout':
+    case 'exit':
       return { handled: true, action: 'logout' };
 
     case 'ping':
@@ -42,61 +44,65 @@ export const processClientCommand = (cmdString, gameState) => {
         };
       }
 
-    // --- HELP MENU (Updated for v16.0) ---
+    // --- HELP MENU (Revamped v17.0) ---
     case 'help':
+    case '?':
       return {
         handled: true,
         output: {
           type: 'info',
           text: `
-[CORE SYSTEM]
-  register [u] [p] (code) : Create Identity
-  login [u] [p]           : Access Session
-  status / whoami         : View Stats & Hardware
-  logout | clear          : Session Management
-  theme [name]            : UI Color (green, amber, plasma, matrix)
+=== ODDZTEK SYSTEM COMMANDS ===
 
-[ECONOMY]
-  mine                    : Data Mining (20s Cycle)
-  daily                   : Loyalty Reward (24h)
-  shop | buy [id]         : Black Market
-  inventory | inv         : View Modules
-  leaderboard             : Top Hackers
-  transfer [u] [amt]      : Fund Transfer
-  collect                 : Collect Passive Server Income
+[IDENTITY & SYSTEM]
+  register [user] [pass]  : Create new node identity
+  login [user] [pass]     : Authenticate session
+  whoami | status         : Display system/hardware stats
+  logout | exit           : Terminate session
+  theme [name]            : Change UI (green, amber, plasma, matrix)
+  leaderboard             : View Global Ranking
 
-[BLACK MARKET]
-  virus list              : View Custom Malware
-  virus create [name]     : Compile new Virus (Costs 1000)
-  virus upgrade [n] [stat]: Upgrade Power/Stealth
-  bounty list             : View Most Wanted
-  bounty place [u] [amt]  : Set price on a player's head
+[ECONOMY & MARKET]
+  mine                    : Start crypto-mining cycle
+  shop                    : Browse Black Market
+  buy [item_id]           : Purchase hardware/software
+  inv | inventory         : View owned assets
+  transfer [user] [amt]   : Send funds
+  collect                 : Harvest passive server income
+  daily                   : Claim loyalty reward
 
-[HACKING OPERATIONS]
-  netscan                 : Scan network for Targets
-  scan [target]           : Recon specific target
-  exploit [port] [virus]  : Breach via Port (Optional Virus)
-  
-  -- INSIDE SHELL --
-  ls | cat [file]         : File Management
-  privesc                 : Attempt Root Access (GPU Rec.)
-  unlock [pin]            : Crack Wallet Encryption
+[OFFENSIVE OPERATIONS]
+  netscan                 : Scan local subnet for targets
+  scan [target]           : Analyze specific target security
+  exploit [port] [virus]  : Launch attack vector
+  hack [target]           : Auto-sequence (Scan -> Exploit)
+  brute [user]            : Force-crack password (needs tools)
 
-[ACTIVITIES]
-  flip [h/t] [amt]        : Coinflip Wager
-  dice [1-6] [amt]        : Dice Roll (5x Payout)
-  slots [amt]             : Slot Machine
+[BLACK MARKET TOOLS]
+  virus list              : View your compiled malware
+  virus create [name]     : Compile new virus payload
+  bounty list             : View active hit contracts
+  bounty place [u] [amt]  : Set bounty on player
 
-[MISSIONS]
-  jobs                    : List Contracts
-  accept [id]             : Start Mission
-  server_hack             : Start Heist (If active)
-  nav [n/s/e/w]           : Mission Movement
+[MISSIONS & CONTRACTS]
+  jobs                    : List available contracts
+  accept [id]             : Sign contract
+  mission start           : Begin active operation
+  mission abort           : Cancel current job
+  nav [n/s/e/w]           : Navigate neural maze
+  download                : Exfiltrate data from target
 
 [COMMUNICATION]
-  chat [msg]              : Global encrypted channel
-  mail check | read [id]  : Secure Inbox
-  mail send [u] [msg]     : Send Encrypted Mail
+  chat [msg]              : Global encrypted broadcast
+  mail list               : Check secure inbox
+  mail read [id]          : Decrypt message
+  mail send [u] [msg]     : Send encrypted packet
+  invite                  : Generate recruitment code
+
+[MINIGAMES]
+  flip [h/t] [amt]        : Wager on quantum coin
+  dice [1-6] [amt]        : Roll prediction
+  slots [amt]             : Spin the wheel
           `
         }
       };
