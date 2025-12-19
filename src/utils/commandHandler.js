@@ -73,13 +73,18 @@ export const processClientCommand = (cmdString, gameState) => {
   bank deposit [amt]      : Secure funds in vault
   bank withdraw [amt]     : Access vault funds
   combine [item]          : Craft upgraded software
+  auction list            : Browse Player Auctions
+  auction sell [item] [$] : List item for sale
+  auction buy [id]        : Bid/Buy auction item
 
-[OFFENSIVE OPERATIONS]
-  netscan                 : Scan local subnet for targets
-  scan [target]           : Analyze specific target security
-  exploit [port] [virus]  : Launch attack vector
-  hack [target]           : Auto-sequence (Scan -> Exploit)
-  brute [user]            : Force-crack password (needs tools)
+[OFFENSIVE OPERATIONS (v2.0)]
+  netscan                 : Scan local subnet (NPCs/Players)
+  scan [target]           : Analyze target security
+  exploit [target]        : START INTRUSION SESSION
+  probe                   : Check session status (Trace/Access)
+  brute                   : Attack Firewall Integrity
+  inject                  : Inject Payload (Gain Access)
+  dc                      : Disconnect / Abort
 
 [BLACK MARKET TOOLS]
   virus list              : View your compiled malware
